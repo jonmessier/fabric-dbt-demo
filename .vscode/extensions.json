@@ -1,0 +1,35 @@
+{
+  // Anyone who opens this folder in VS Code is prompted to install these.
+  // Command Palette -> "Extensions: Show Recommended Extensions" to see the list.
+  "recommendations": [
+    // --- dbt core tooling ---
+    "innoverio.vscode-dbt-power-user",   // dbt Core support: lineage, compiled SQL preview, ref() navigation
+    "samuelcolvin.jinjahtml",            // Jinja syntax highlighting inside .sql files
+    "sqlfluff.vscode-sqlfluff",          // SQL linting and formatting, dbt-aware
+
+    // --- Python (dbt runs on Python) ---
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+
+    // --- data and config files ---
+    "redhat.vscode-yaml",                // schema validation for dbt_project.yml / _schema.yml
+    "mechatroner.rainbow-csv",           // readable seed files
+
+    // --- database connectivity ---
+    "ms-mssql.mssql",                    // SQL Server / Fabric Warehouse / Lakehouse SQL endpoint
+
+    // --- git ---
+    "eamodio.gitlens",
+    "github.vscode-pull-request-github",
+
+    // --- AI ---
+    "anthropic.claude-code"
+  ],
+
+  // Extensions VS Code should NOT suggest for this workspace.
+  "unwantedRecommendations": [
+    // The official dbt Labs extension requires the dbt Fusion engine and does not
+    // work with dbt Core or community adapters (dbt-fabric, dbt-fabricspark).
+    // Use dbt Power User above instead.
+  ]
+}

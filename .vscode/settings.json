@@ -1,0 +1,68 @@
+{
+  // ---------------------------------------------------------------
+  // Jinja highlighting — scoped, deliberately
+  // ---------------------------------------------------------------
+  // Only dbt model/macro/test files get the jinja-sql language mode.
+  // Do NOT apply this to all *.sql globally: the mssql extension only runs
+  // queries against files in plain `sql` mode, so a global association
+  // silently breaks "Execute Query" on your scratch SQL files.
+  "files.associations": {
+    "**/models/**/*.sql": "jinja-sql",
+    "**/macros/**/*.sql": "jinja-sql",
+    "**/tests/**/*.sql": "jinja-sql",
+    "**/analyses/**/*.sql": "jinja-sql"
+  },
+
+  // ---------------------------------------------------------------
+  // sqlfluff
+  // ---------------------------------------------------------------
+  // Dialect and templater live in the .sqlfluff file inside each dbt project,
+  // not here — that way silver (sparksql) and gold (tsql) can differ.
+  "sqlfluff.linter.run": "onType",
+  "sqlfluff.format.enabled": true,
+
+  // ---------------------------------------------------------------
+  // Python
+  // ---------------------------------------------------------------
+  "python.terminal.activateEnvironment": true,
+  "python.analysis.typeCheckingMode": "basic",
+
+  // ---------------------------------------------------------------
+  // YAML — optional schema validation for dbt config files
+  // Community schema; remove this block if it ever 404s.
+  // ---------------------------------------------------------------
+  "yaml.schemas": {
+    "https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/main/schemas/dbt_yml_files.json": [
+      "/**/models/**/*.yml",
+      "/**/seeds/**/*.yml",
+      "/**/snapshots/**/*.yml"
+    ]
+  },
+
+  // ---------------------------------------------------------------
+  // Editor
+  // ---------------------------------------------------------------
+  "[jinja-sql]": {
+    "editor.defaultFormatter": "sqlfluff.vscode-sqlfluff",
+    "editor.formatOnSave": false,
+    "editor.tabSize": 4
+  },
+  "[yaml]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  },
+
+  // Keep build artifacts and virtualenvs out of search and the file tree
+  "files.exclude": {
+    "**/target": true,
+    "**/dbt_packages": true,
+    "**/logs": true,
+    "**/.venv*": true,
+    "**/__pycache__": true
+  },
+  "search.exclude": {
+    "**/target": true,
+    "**/dbt_packages": true,
+    "**/logs": true
+  }
+}
