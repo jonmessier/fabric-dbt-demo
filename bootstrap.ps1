@@ -27,7 +27,7 @@
 [CmdletBinding()]
 param(
     [ValidateSet('duckdb', 'postgres', 'snowflake', 'fabric', 'fabricspark', 'none')]
-    [string]$Adapter = 'duckdb',
+    [string[]]$Adapter = @('fabric','fabricspark'),
 
     [string]$VenvName = '.venv',
 
