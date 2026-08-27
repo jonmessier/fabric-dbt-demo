@@ -120,11 +120,13 @@ Write-Ok "pip upgraded"
 # 4. dbt + adapter
 # ---------------------------------------------------------------
 if ($Adapter -ne 'none') {
-    Write-Step "Installing dbt-$Adapter"
+    foreach ($a in $Adapter) {
+        Write-Step "Installing dbt-$a"
 
-    # Installing the adapter pulls dbt-core as a dependency at a compatible version.
-    & $venvPython -m pip install "dbt-$Adapter" --quiet
-    Write-Ok "dbt-$Adapter installed"
+        # Installing the adapter pulls dbt-core as a dependency at a compatible version.
+        & $venvPython -m pip install "dbt-$a" --quiet
+        Write-Ok "dbt-$a installed"
+    }
 
     & $venvPython -m pip install sqlfluff sqlfluff-templater-dbt --quiet
     Write-Ok "sqlfluff installed"
