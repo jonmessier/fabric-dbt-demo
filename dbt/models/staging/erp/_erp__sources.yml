@@ -1,0 +1,28 @@
+version: 2
+
+sources:
+  - name: erp
+    description: >
+      ERP extracts (customers, items, prices, orders, shipments, invoices) as landed in the bronze
+      lakehouse. Append-only: a full extract on day one, then daily files with new and changed rows.
+    database: "{{ env_var('FABRIC_LAKEHOUSE', 'lh_bronze') }}"
+    schema: dbo
+    loaded_at_field: _ingested_at
+    freshness:
+      warn_after: {count: 26, period: hour}
+      error_after: {count: 50, period: hour}
+    tables:
+      - name: erp_customer
+        description: Customer master. The ERP overwrites changes, so history only exists from the day we started loading.
+      - name: erp_item
+        description: Item (SKU) master.
+      - name: erp_price_list
+        description: List price per item and price tier, effective-dated with starting_date and ending_date.
+      - name: erp_sales_header
+        description: Sales order headers. An order re-appears when its status changes.
+      - name: erp_sales_line
+        description: Sales order lines.
+      - name: erp_shipment
+        description: Posted shipments.
+      - name: erp_invoice_line
+        description: Posted invoice and credit memo lines. Credit memos carry negative quantities.

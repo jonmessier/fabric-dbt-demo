@@ -19,7 +19,7 @@ seeds:
       column_types: {distributor_code: varchar(20), distributor_sku: varchar(40), item_no: varchar(20)}
     data_tests:
       - unique:
-          column_name: "distributor_code + '|' + distributor_sku"
+          column_name: "concat(distributor_code, '|', distributor_sku)"
     columns:
       - name: distributor_sku
         data_tests: [not_null]

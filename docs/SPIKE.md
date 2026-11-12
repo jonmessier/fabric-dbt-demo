@@ -14,6 +14,8 @@ Tenant: _fill in_ · Capacity: _fill in_ · Date: _fill in_
 | `dbt-fabric`, `fabric-cicd`, `ms-fabric-cli`, `sqlfluff` install together | Yes, on Linux with Python 3.13 (dbt-fabric 1.12.0, dbt-core 1.12.7, fabric-cicd 1.4.0). Not yet tried on Windows with Python 3.11. |
 | Project skeleton parses | Yes: `dbt parse` finds 8 seeds and 11 tests with dbt-core 1.12.7 / dbt-fabric 1.12.0. |
 | Data generator | Runs in about 2 seconds; planted defects verified; backfill + advance gives the same rows as one longer run. |
+| Staging layer logic | 16 staging models, 80 data tests and 9 unit tests were run against the generated data in a local stand-in database (SQL translated from T-SQL). Unit tests pass; the only data-test hits are the planted warnings. Not yet run on Fabric, so T-SQL details (`bit`, `datetime2`, `trim`, cross-database views) are unproven. |
+| Test argument syntax | Generic test arguments (`to:`, `field:`, `values:`) are written at the top level so they work on dbt 1.9. dbt 1.12 accepts them with a deprecation warning that asks for an `arguments:` block. Switch once item 1 below confirms the runtime is 1.10.5 or later. |
 
 ## Checklist
 

@@ -1,0 +1,19 @@
+version: 2
+
+sources:
+  - name: pos
+    description: >
+      Taproom point-of-sale exports (JSON) as landed in the bronze lakehouse. The ingest notebook
+      splits each transaction into a header row and one row per line item.
+    database: "{{ env_var('FABRIC_LAKEHOUSE', 'lh_bronze') }}"
+    schema: dbo
+    loaded_at_field: _ingested_at
+    freshness:
+      # the taproom is closed on Mondays, so allow two days before warning
+      warn_after: {count: 50, period: hour}
+      error_after: {count: 74, period: hour}
+    tables:
+      - name: pos_transaction
+        description: One row per transaction per file. A re-sent file repeats transactions.
+      - name: pos_line_item
+        description: One row per transaction line item per file.
