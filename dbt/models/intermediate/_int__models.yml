@@ -14,6 +14,9 @@ models:
         description: Negative on returns. Null for merchandise.
       - name: brand_code
         description: Null only for taproom merchandise.
+      - name: product_code
+        description: ERP item number, or brand plus serving size for taproom pours (NSL-POUR-16), or the POS code for merchandise.
+        data_tests: [not_null]
 
   - name: int_depletions_unioned
     description: The three distributor depletion reports stacked in one shape.
@@ -83,9 +86,9 @@ unit_tests:
           - {state_text: "MINN.", state_code: MN}
       - input: ref('stg_pos__line_item')
         rows:
-          - {transaction_id: T-1, line_id: 1, brand_code: PBI, package_code: POUR-16, quantity: 2, line_amount: 14.00}
-          - {transaction_id: T-1, line_id: 2, brand_code: null, package_code: null, quantity: 1, line_amount: 22.00}
-          - {transaction_id: T-2, line_id: 1, brand_code: PBI, package_code: POUR-16, quantity: 1, line_amount: 7.00}
+          - {transaction_id: T-1, line_id: 1, item_code: DRAFT-PBI, item_name: Pine Barrens IPA, brand_code: PBI, package_code: POUR-16, quantity: 2, line_amount: 14.00}
+          - {transaction_id: T-1, line_id: 2, item_code: MERCH-HAT, item_name: Pine Trucker Hat, brand_code: null, package_code: null, quantity: 1, line_amount: 22.00}
+          - {transaction_id: T-2, line_id: 1, item_code: DRAFT-PBI, item_name: Pine Barrens IPA, brand_code: PBI, package_code: POUR-16, quantity: 1, line_amount: 7.00}
       - input: ref('stg_pos__transaction')
         rows:
           - {transaction_id: T-1, transaction_date: "2026-10-05", transaction_status: COMPLETED}
@@ -94,7 +97,7 @@ unit_tests:
         rows:
           - {package_code: KEG-HALF, barrels: 0.5, case_equivalents: 6.8889}
           - {package_code: CS-24x16, barrels: 0.09677, case_equivalents: 1.3333}
-          - {package_code: POUR-16, barrels: 0.004032, case_equivalents: 0.0556}
+          - {package_code: POUR-16, description: 16 oz draft pour, barrels: 0.004032, case_equivalents: 0.0556}
       - input: ref('ref_channel')
         rows:
           - {source_system: ERP, customer_type: DISTRIBUTOR, channel: Wholesale}
@@ -104,8 +107,8 @@ unit_tests:
       rows:
         - {sales_line_key: "ERP|INV-1|10000", channel: Wholesale, state_code: MN, barrels: 2.0000, standard_cost_amount: 300.00}
         - {sales_line_key: "ERP|CM-1|10000", channel: "Direct - On premise", state_code: MN, barrels: -0.1935, standard_cost_amount: -34.00}
-        - {sales_line_key: "POS|T-1|1", channel: Taproom, state_code: MN, barrels: 0.0081, standard_cost_amount: null}
-        - {sales_line_key: "POS|T-1|2", channel: Taproom, state_code: MN, barrels: null, standard_cost_amount: null}
+        - {sales_line_key: "POS|T-1|1", product_code: PBI-POUR-16, product_name: "Pine Barrens IPA, 16 oz draft pour", channel: Taproom, state_code: MN, barrels: 0.0081, standard_cost_amount: null}
+        - {sales_line_key: "POS|T-1|2", product_code: MERCH-HAT, product_name: Pine Trucker Hat, channel: Taproom, state_code: MN, barrels: null, standard_cost_amount: null}
 
   - name: int_depletions_mapped_keeps_unmapped_skus_visible
     description: A mapped SKU gets an item and barrels; an unknown SKU keeps its row, flagged, with no barrels.

@@ -1,0 +1,73 @@
+version: 2
+
+unit_tests:
+  - name: dim_date_maps_days_to_4_4_5_periods
+    description: >
+      Days map to the fiscal period whose start and end dates contain them, and weekdays do not
+      depend on the server's DATEFIRST setting. (Periods shortened to a few days to keep the test small.)
+    model: dim_date
+    given:
+      - input: ref('ref_fiscal_calendar_445')
+        rows:
+          - {fiscal_year: 2025, fiscal_quarter: 1, fiscal_period: 3, period_name: FY2025-P03, start_date: "2025-03-29", end_date: "2025-03-29", weeks_in_period: 5}
+          - {fiscal_year: 2025, fiscal_quarter: 2, fiscal_period: 4, period_name: FY2025-P04, start_date: "2025-03-30", end_date: "2025-03-31", weeks_in_period: 4}
+    expect:
+      rows:
+        - {date_key: 20250329, calendar_quarter: 1, fiscal_quarter: 1, fiscal_period_name: FY2025-P03, day_name: Saturday, day_of_week: 6, is_weekend: true}
+        - {date_key: 20250330, calendar_quarter: 1, fiscal_quarter: 2, fiscal_period_name: FY2025-P04, day_name: Sunday, day_of_week: 7, is_weekend: true}
+        - {date_key: 20250331, calendar_quarter: 1, fiscal_quarter: 2, fiscal_period_name: FY2025-P04, day_name: Monday, day_of_week: 1, is_weekend: false}
+
+  - name: fct_sales_line_incremental_load_takes_new_and_overlap_rows
+    description: >
+      On an incremental run only lines loaded after (newest load in the table - 3 days) are processed.
+      ERP lines are costed at standard cost and tied to the customer version valid on the sale date;
+      taproom pours are costed at the brand's cost per barrel.
+    model: fct_sales_line
+    overrides:
+      macros:
+        is_incremental: true
+    given:
+      - input: this
+        rows:
+          - {sales_line_key: "ERP|INV-0|10000", _ingested_at: "2026-11-05 02:00:00"}
+      - input: ref('int_sales_lines_unioned')
+        rows:
+          - {sales_line_key: "ERP|INV-OLD|10000", source_system: ERP, document_no: INV-OLD, document_line_no: 10000, sale_date: "2026-10-20", customer_no: C-1, product_code: NSL-C16, brand_code: NSL, channel: "Direct - On premise", is_credit: false, quantity: 5, net_amount: 190.00, barrels: 0.4839, standard_cost_amount: 85.00, _ingested_at: "2026-10-31 02:00:00"}
+          - {sales_line_key: "ERP|INV-1|10000", source_system: ERP, document_no: INV-1, document_line_no: 10000, sale_date: "2026-11-03", customer_no: C-1, product_code: NSL-C16, brand_code: NSL, channel: "Direct - On premise", is_credit: false, quantity: 10, net_amount: 380.00, barrels: 0.9677, standard_cost_amount: 170.00, _ingested_at: "2026-11-04 02:00:00"}
+          - {sales_line_key: "POS|T-1|1", source_system: POS, document_no: T-1, document_line_no: 1, sale_date: "2026-11-05", customer_no: null, product_code: NSL-POUR-16, brand_code: NSL, channel: Taproom, is_credit: false, quantity: 2, net_amount: 14.00, barrels: 0.0081, standard_cost_amount: null, _ingested_at: "2026-11-06 02:00:00"}
+      - input: ref('snap_erp_customer')
+        rows:
+          - {customer_no: C-1, dbt_scd_id: c1-v1, dbt_valid_from: "2024-07-05 10:00:00", dbt_valid_to: "2026-11-01 08:15:00"}
+          - {customer_no: C-1, dbt_scd_id: c1-v2, dbt_valid_from: "2026-11-01 08:15:00", dbt_valid_to: null}
+      - input: ref('dim_brand')
+        rows:
+          - {brand_code: NSL, standard_cost_per_bbl: 180.00}
+    expect:
+      rows:
+        - {sales_line_key: "ERP|INV-1|10000", date_key: 20261103, customer_version_key: c1-v2, cost_amount: 170.00, gross_margin_amount: 210.00}
+        - {sales_line_key: "POS|T-1|1", date_key: 20261105, customer_version_key: TAPROOM, customer_no: TAPROOM, cost_amount: 1.46, gross_margin_amount: 12.54}
+
+  - name: fct_channel_inventory_monthly_runs_inventory_until_latest_report
+    description: >
+      Inventory is the running total of shipped minus depleted barrels. Unmapped depletions are left
+      out, and months after the distributor's latest report are dropped.
+    model: fct_channel_inventory_monthly
+    given:
+      - input: ref('fct_sales_line')
+        rows:
+          - {customer_no: D-1001, brand_code: NSL, sale_date: "2026-09-10", barrels: 10.0}
+          - {customer_no: D-1001, brand_code: NSL, sale_date: "2026-10-08", barrels: 12.0}
+          - {customer_no: D-1001, brand_code: NSL, sale_date: "2026-11-03", barrels: 5.0}
+          - {customer_no: C-2001, brand_code: NSL, sale_date: "2026-10-08", barrels: 3.0}
+      - input: ref('dim_distributor')
+        rows:
+          - {distributor_code: NORTHLAND, erp_customer_no: D-1001}
+      - input: ref('fct_depletion')
+        rows:
+          - {distributor_code: NORTHLAND, brand_code: NSL, report_month: "2026-09-01", is_sku_mapped: true, barrels: 8.0}
+          - {distributor_code: NORTHLAND, brand_code: NSL, report_month: "2026-10-01", is_sku_mapped: true, barrels: 11.0}
+          - {distributor_code: NORTHLAND, brand_code: UNMAPPED, report_month: "2026-10-01", is_sku_mapped: false, barrels: 4.0}
+    expect:
+      rows:
+        - {channel_inventory_key: "NORTHLAND|NSL|2026-09", shipped_barrels: 10.0, depleted_barrels: 8.0, ending_inventory_barrels: 2.0, weeks_of_supply: 1.07}
+        - {channel_inventory_key: "NORTHLAND|NSL|2026-10", shipped_barrels: 12.0, depleted_barrels: 11.0, ending_inventory_barrels: 3.0, weeks_of_supply: 1.21}

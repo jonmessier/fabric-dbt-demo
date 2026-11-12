@@ -19,7 +19,7 @@ The full design is in [docs/DESIGN.md](docs/DESIGN.md). Working rules for Claude
 | 1 | Spike: confirm what works on Fabric ([docs/SPIKE.md](docs/SPIKE.md)) | not started |
 | 2 | Repo scaffold, data generator, dbt skeleton with seeds | done |
 | 4 | Bronze ingest notebook (`notebooks/nb_ingest_bronze.py`) | written, tested on local Spark; not run in Fabric |
-| 5 | dbt staging, snapshot, intermediate models, tests, unit tests | written, checked locally; gold to do |
+| 5 | dbt staging, snapshot, intermediate and gold (13 models with contracts), audit run log, 16 unit tests | written, checked locally; not run on Fabric |
 | 3, 6, 7 | Fabric provisioning, dbt job, CI/CD | not started |
 
 ## Quick start (Windows, PowerShell)
@@ -69,7 +69,7 @@ tasks.ps1                single entry point
 config/environments.yml  workspace and item names per environment
 scripts/                 data generator, environment loader, prerequisite check
 notebooks/               Fabric notebook that loads the landing zone into bronze
-dbt/                     the dbt project: seeds, staging, snapshot, intermediate
+dbt/                     the dbt project: seeds, staging, snapshot, intermediate, gold
 docs/                    design, spike checklist, IDE setup notes
 bootstrap.ps1, .vscode/  VS Code setup (see docs/ide-setup.md)
 ```

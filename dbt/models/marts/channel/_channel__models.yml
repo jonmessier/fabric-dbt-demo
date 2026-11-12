@@ -1,0 +1,115 @@
+version: 2
+
+# Gold layer: contracts are enforced, so every column and its exact type is listed here.
+# Change the model and this file together, or the build fails.
+
+models:
+- name: fct_channel_inventory_monthly
+  description: 'Barrels in each distributor''s warehouse by brand and month: shipped vs depleted.'
+  config:
+    contract:
+      enforced: true
+  columns:
+  - name: channel_inventory_key
+    data_type: varchar(60)
+    data_tests:
+    - unique
+    - not_null
+  - name: month_date_key
+    data_type: int
+    description: First day of the month as yyyymmdd; joins to dim_date.
+  - name: report_month
+    data_type: date
+  - name: distributor_code
+    data_type: varchar(20)
+    description: Distributor; joins to dim_distributor.
+    data_tests:
+    - relationships:
+        to: ref('dim_distributor')
+        field: distributor_code
+  - name: brand_code
+    data_type: varchar(10)
+    description: Brand; joins to dim_brand.
+    data_tests:
+    - relationships:
+        to: ref('dim_brand')
+        field: brand_code
+  - name: shipped_barrels
+    data_type: decimal(18,4)
+    description: Barrels invoiced to the distributor (sell-in).
+  - name: depleted_barrels
+    data_type: decimal(18,4)
+    description: Barrels the distributor reported selling (sell-through).
+  - name: net_change_barrels
+    data_type: decimal(18,4)
+  - name: ending_inventory_barrels
+    data_type: decimal(18,4)
+    description: Running total of shipped minus depleted, assuming zero starting inventory.
+  - name: weeks_of_supply
+    data_type: decimal(9,2)
+    description: Ending inventory divided by the month's average weekly depletions.
+- name: fct_depletion
+  description: Distributor sell-through by month, retail account and distributor product code.
+  config:
+    contract:
+      enforced: true
+  columns:
+  - name: depletion_key
+    data_type: varchar(160)
+    data_tests:
+    - unique
+    - not_null
+  - name: month_date_key
+    data_type: int
+    description: First day of the month as yyyymmdd; joins to dim_date.
+    data_tests:
+    - relationships:
+        to: ref('dim_date')
+        field: date_key
+  - name: report_month
+    data_type: date
+  - name: distributor_code
+    data_type: varchar(20)
+    description: Distributor; joins to dim_distributor.
+    data_tests:
+    - relationships:
+        to: ref('dim_distributor')
+        field: distributor_code
+  - name: retail_account_key
+    data_type: varchar(64)
+    description: Joins to dim_retail_account.
+    data_tests:
+    - relationships:
+        to: ref('dim_retail_account')
+        field: retail_account_key
+  - name: product_key
+    data_type: varchar(40)
+    description: Product; joins to dim_product.
+    data_tests:
+    - relationships:
+        to: ref('dim_product')
+        field: product_key
+  - name: brand_code
+    data_type: varchar(10)
+    description: Brand; joins to dim_brand.
+    data_tests:
+    - relationships:
+        to: ref('dim_brand')
+        field: brand_code
+  - name: distributor_sku
+    data_type: varchar(40)
+    description: The distributor's own product code.
+  - name: is_sku_mapped
+    data_type: bit
+    description: 0 when the distributor product code is not in the cross-reference seed.
+  - name: quantity
+    data_type: int
+    description: Units in the line's own unit (keg, case, pour, pack, item).
+  - name: unit_type
+    data_type: varchar(10)
+  - name: barrels
+    data_type: decimal(18,4)
+    description: Volume in US beer barrels (31 gallons). Negative on returns.
+  - name: case_equivalents
+    data_type: decimal(18,4)
+    description: Volume in 24 x 12 oz case equivalents.

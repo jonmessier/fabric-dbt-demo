@@ -44,6 +44,6 @@ data_tests:
     +store_failures: true
     +schema: audit
 
-# Phase 5: on-run-end hook that writes one row per node to audit.dbt_run_log
-# on-run-end:
-#   - "{{ log_run_results(results) }}"
+# After every run, write one row per node (status, failures, message, time) to audit.dbt_run_log.
+on-run-end:
+  - "{{ log_run_results(results) }}"

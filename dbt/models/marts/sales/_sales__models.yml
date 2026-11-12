@@ -1,0 +1,197 @@
+version: 2
+
+# Gold layer: contracts are enforced, so every column and its exact type is listed here.
+# Change the model and this file together, or the build fails.
+
+models:
+- name: fct_excise_tax_monthly
+  description: Excise tax by state and month (illustrative rates).
+  config:
+    contract:
+      enforced: true
+  columns:
+  - name: excise_key
+    data_type: varchar(20)
+    data_tests:
+    - unique
+    - not_null
+  - name: month_date_key
+    data_type: int
+    description: First day of the month as yyyymmdd; joins to dim_date.
+    data_tests:
+    - relationships:
+        to: ref('dim_date')
+        field: date_key
+  - name: sales_month
+    data_type: date
+  - name: state_code
+    data_type: varchar(2)
+    description: Two-letter state.
+  - name: net_barrels
+    data_type: decimal(18,4)
+    description: Barrels sold in the state that month, net of returns.
+  - name: rate_per_barrel
+    data_type: decimal(9,4)
+    description: Excise rate per barrel from ref_excise_tax_rate. Null means the state is missing from the seed.
+    data_tests:
+    - not_null:
+        config:
+          severity: error
+  - name: excise_tax_amount
+    data_type: decimal(18,2)
+- name: fct_price_realization
+  description: One row per ERP invoice line (returns excluded) priced against list at the order date.
+  config:
+    contract:
+      enforced: true
+  columns:
+  - name: invoice_line_key
+    data_type: varchar(40)
+    data_tests:
+    - unique
+    - not_null
+  - name: order_date_key
+    data_type: int
+    description: Order date as yyyymmdd; joins to dim_date.
+    data_tests:
+    - relationships:
+        to: ref('dim_date')
+        field: date_key
+  - name: order_date
+    data_type: date
+  - name: invoice_date
+    data_type: date
+  - name: order_no
+    data_type: varchar(20)
+  - name: customer_version_key
+    data_type: varchar(64)
+    description: The customer version valid on the transaction date; joins to dim_customer.
+    data_tests:
+    - relationships:
+        to: ref('dim_customer')
+        field: customer_version_key
+  - name: customer_no
+    data_type: varchar(20)
+    description: ERP customer number (TAPROOM for walk-in taproom sales).
+  - name: product_key
+    data_type: varchar(40)
+    description: Product; joins to dim_product.
+    data_tests:
+    - relationships:
+        to: ref('dim_product')
+        field: product_key
+  - name: price_tier
+    data_type: varchar(5)
+  - name: quantity
+    data_type: int
+    description: Units in the line's own unit (keg, case, pour, pack, item).
+  - name: list_price
+    data_type: decimal(18,2)
+    description: List price for the item and the customer's tier on the order date.
+    data_tests:
+    - not_null:
+        config:
+          severity: warn
+  - name: invoiced_unit_price
+    data_type: decimal(18,2)
+  - name: line_discount_pct
+    data_type: decimal(5,2)
+  - name: net_amount
+    data_type: decimal(18,2)
+    description: Billed amount after discounts. Negative on returns.
+  - name: list_amount
+    data_type: decimal(18,2)
+  - name: price_variance_amount
+    data_type: decimal(18,2)
+    description: net_amount - list_amount.
+  - name: price_realization_pct
+    data_type: decimal(9,4)
+    description: net_amount / list_amount; 1.0 means sold at list.
+- name: fct_sales_line
+  description: One row per sale line from the ERP and the taproom, with cost and gross margin. Incremental.
+  config:
+    contract:
+      enforced: true
+  columns:
+  - name: sales_line_key
+    data_type: varchar(80)
+    description: Source system, document number and line number.
+    data_tests:
+    - unique
+    - not_null
+  - name: source_system
+    data_type: varchar(10)
+    description: ERP or POS.
+  - name: document_no
+    data_type: varchar(30)
+  - name: document_line_no
+    data_type: int
+  - name: date_key
+    data_type: int
+    description: Date as yyyymmdd; joins to dim_date.
+    data_tests:
+    - relationships:
+        to: ref('dim_date')
+        field: date_key
+  - name: sale_date
+    data_type: date
+  - name: customer_version_key
+    data_type: varchar(64)
+    description: The customer version valid on the transaction date; joins to dim_customer.
+    data_tests:
+    - relationships:
+        to: ref('dim_customer')
+        field: customer_version_key
+    - not_null
+  - name: customer_no
+    data_type: varchar(20)
+    description: ERP customer number (TAPROOM for walk-in taproom sales).
+  - name: product_key
+    data_type: varchar(40)
+    description: Product; joins to dim_product.
+    data_tests:
+    - relationships:
+        to: ref('dim_product')
+        field: product_key
+  - name: brand_code
+    data_type: varchar(10)
+    description: Brand; joins to dim_brand.
+    data_tests:
+    - relationships:
+        to: ref('dim_brand')
+        field: brand_code
+  - name: channel
+    data_type: varchar(40)
+    description: Sales channel; joins to dim_channel.
+    data_tests:
+    - relationships:
+        to: ref('dim_channel')
+        field: channel
+    - not_null
+  - name: state_code
+    data_type: varchar(2)
+    description: Two-letter state.
+  - name: is_credit
+    data_type: bit
+    description: 1 for ERP credit memo lines (returns).
+  - name: quantity
+    data_type: int
+    description: Units in the line's own unit (keg, case, pour, pack, item).
+  - name: net_amount
+    data_type: decimal(18,2)
+    description: Billed amount after discounts. Negative on returns.
+  - name: barrels
+    data_type: decimal(18,4)
+    description: Volume in US beer barrels (31 gallons). Negative on returns.
+  - name: case_equivalents
+    data_type: decimal(18,4)
+    description: Volume in 24 x 12 oz case equivalents.
+  - name: cost_amount
+    data_type: decimal(18,2)
+    description: ERP standard cost, or barrels x brand standard cost per barrel for taproom pours. Null for merchandise.
+  - name: gross_margin_amount
+    data_type: decimal(18,2)
+    description: net_amount - cost_amount.
+  - name: _ingested_at
+    data_type: datetime2(6)
+    description: When the line was loaded into bronze; drives the incremental load.

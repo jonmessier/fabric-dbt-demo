@@ -606,7 +606,8 @@ class World:
                 for item_no in sorted(shipped):
                     it = self.items[item_no]
                     keg = it["base_uom"] == "KEG"
-                    units = int(round(shipped[item_no] * r.uniform(0.86, 1.04)))
+                    # distributors sell through most, never more, of what they received that month
+                    units = int(round(shipped[item_no] * r.uniform(0.85, 0.99)))
                     pool = [a for a in accts if a["on"] == keg or r.random() < 0.15]
                     k = max(1, min(len(pool), units, r.randint(6, 25)))
                     picked = r.sample(pool, k)

@@ -40,6 +40,7 @@ priced as (
         invoice_lines.order_no,
         orders.order_date,
         invoice_lines.customer_no,
+        customer_history.dbt_scd_id as customer_version_key,
         customer_history.price_tier,
         invoice_lines.item_no,
         invoice_lines.quantity,

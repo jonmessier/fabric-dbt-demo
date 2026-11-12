@@ -33,7 +33,7 @@ uom as (
 )
 
 select
-    cast(concat(depletions.distributor_code, '|', convert(varchar(7), depletions.report_month, 120), '|',
+    cast(concat(depletions.distributor_code, '|', concat(year(depletions.report_month), '-', right(concat('0', month(depletions.report_month)), 2)), '|',
         depletions.distributor_account_id, '|', depletions.distributor_sku) as varchar(160)) as depletion_key,
     depletions.distributor_code,
     depletions.report_month,
