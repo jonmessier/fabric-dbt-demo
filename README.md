@@ -17,8 +17,10 @@ The full design is in [docs/DESIGN.md](docs/DESIGN.md). Working rules for Claude
 |---|---|---|
 | 0 | Design | done |
 | 1 | Spike: confirm what works on Fabric ([docs/SPIKE.md](docs/SPIKE.md)) | not started |
-| 2 | Repo scaffold, data generator, dbt skeleton with seeds | done, untested on Windows |
-| 3-7 | Fabric provisioning, bronze load, dbt models, CI/CD | not started |
+| 2 | Repo scaffold, data generator, dbt skeleton with seeds | done |
+| 4 | Bronze ingest notebook (`notebooks/nb_ingest_bronze.py`) | written, tested on local Spark; not run in Fabric |
+| 5 | dbt staging, snapshot, intermediate models, tests, unit tests | written, checked locally; gold to do |
+| 3, 6, 7 | Fabric provisioning, dbt job, CI/CD | not started |
 
 ## Quick start (Windows, PowerShell)
 
@@ -56,8 +58,8 @@ distributor product codes missing from the cross-reference seed, a late distribu
 invoices pointing at shipments that do not exist, a batch that packaged more beer than it brewed,
 a state with no excise rate, and messy state names. `-Clean` generates the same data without them.
 
-`advance-day` then delivers surprises on a schedule: day 1 a customer moves and changes price tier
-and yesterday's POS file arrives again, day 2 a price increase, day 3 the late distributor file.
+`advance-day` then delivers surprises on a schedule: day 1 a bar (C-2001) moves and is upgraded from
+price tier C to B and yesterday's POS file arrives again, day 2 a price increase, day 3 the late distributor file.
 
 ## Repo layout
 
@@ -66,7 +68,8 @@ CLAUDE.md, .claude/      instructions, permissions and slash commands for Claude
 tasks.ps1                single entry point
 config/environments.yml  workspace and item names per environment
 scripts/                 data generator, environment loader, prerequisite check
-dbt/                     the dbt project (seeds and config so far)
+notebooks/               Fabric notebook that loads the landing zone into bronze
+dbt/                     the dbt project: seeds, staging, snapshot, intermediate
 docs/                    design, spike checklist, IDE setup notes
 bootstrap.ps1, .vscode/  VS Code setup (see docs/ide-setup.md)
 ```

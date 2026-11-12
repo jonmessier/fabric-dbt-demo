@@ -309,7 +309,12 @@ class World:
             self.customer_versions[no].append(new)
 
         # scheduled after the backfill so `advance` exercises snapshots (SCD2)
-        change("C-2016", self.bf + timedelta(days=1), address_line1="4100 Depot St", city="Woodbury",
+        # day 1: a tier-C bar moves across the metro and is upgraded to tier B (key account)
+        mover = next(no for no, vs in sorted(self.customer_versions.items())
+                     if no.startswith("C-") and no != "C-2021"
+                     and vs[0]["customer_type"] == "ON_PREMISE" and vs[0]["price_tier"] == "C")
+        self.tier_change_customer = mover
+        change(mover, self.bf + timedelta(days=1), address_line1="4100 Depot St", city="Woodbury",
                territory="METRO-EAST", price_tier="B")
         change("C-2021", self.bf + timedelta(days=4), salesperson="S. Bergstrom", territory="METRO-WEST")
 

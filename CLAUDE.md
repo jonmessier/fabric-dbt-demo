@@ -43,6 +43,7 @@ Use `.\tasks.ps1` as the entry point (`.\tasks.ps1 help` lists everything; tasks
 - **Severity**: use `config: {severity: warn}` or `warn_if`/`error_if` thresholds as listed in DESIGN §3. Don't downgrade an error to make a build pass; flag it instead.
 - **No dbt packages** (no `packages.yml`) until the spike confirms the Fabric dbt job supports them. Write generic tests/macros in `tests/generic` and `macros/`.
 - SQL dialect is T-SQL (Fabric Warehouse). No `LIMIT` (use `TOP`), no `ILIKE`, no `::` casts. sqlfluff config is `dbt/.sqlfluff`.
+- Bronze is loaded by `notebooks/nb_ingest_bronze.py` and must match `docs/BRONZE.md` (all strings, lower snake_case, `_source_file`/`_landed_date`/`_ingested_at`). Change the doc and the notebook together.
 - Source data comes from `scripts/generate_data.py` (stdlib only, deterministic). Read its docstring before changing staging models; `-WriteSeeds` overwrites hand edits in `dbt/seeds`.
 - Seeds are business-owned reference data. Keep them small, sorted, with a `_seeds.yml` declaring column types.
 

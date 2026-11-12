@@ -1,0 +1,10 @@
+version: 2
+
+snapshots:
+  - name: snap_erp_customer
+    description: >
+      Type 2 history of ERP customers. One row per customer per version; the current version has
+      dbt_valid_to = null. Captures tier, territory, salesperson and address changes the ERP overwrites.
+    columns:
+      - name: customer_no
+        data_tests: [not_null]

@@ -35,7 +35,7 @@ seeds:
 
 snapshots:
   lpb:
-    +target_schema: snapshots
+    +schema: snapshots
     +tags: ["silver"]
 
 # Failing rows of every data test are kept in the audit schema for review.

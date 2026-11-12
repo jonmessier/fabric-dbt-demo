@@ -1,7 +1,7 @@
 # Bronze contract
 
-What the staging models expect to find in `lh_bronze`. The ingest notebook (`nb_ingest_bronze`,
-Phase 4) must produce exactly this; the dbt sources in `dbt/models/staging/*/_*__sources.yml` read it.
+What the staging models expect to find in `lh_bronze`. The ingest notebook (`notebooks/nb_ingest_bronze.py`)
+produces exactly this; the dbt sources in `dbt/models/staging/*/_*__sources.yml` read it.
 
 ## Rules
 
@@ -10,8 +10,8 @@ Phase 4) must produce exactly this; the dbt sources in `dbt/models/staging/*/_*_
 2. **Column names** are the file's headers or JSON keys in lower snake_case: lower-case, every run of
    characters other than `a-z0-9` becomes `_`, leading and trailing `_` removed.
    `Acct #` becomes `acct`, `Supplier Item` becomes `supplier_item`, `RPT_YYYYMM` becomes `rpt_yyyymm`.
-3. **Types.** CSV and text files load every column as string. JSON keeps the types Spark infers.
-   Staging casts everything explicitly either way.
+3. **Types.** Every column is a string, from CSV and JSON alike (JSON is read with `primitivesAsString`),
+   so a column never changes type from one file to the next. Staging casts everything explicitly.
 4. **Three metadata columns** on every table:
 
    | Column | Type | Meaning |
@@ -42,3 +42,9 @@ Phase 4) must produce exactly this; the dbt sources in `dbt/models/staging/*/_*_
 | `dist_depletion_hawkeye` | `dist/*/HPW_DEPL_*.txt` (pipe-delimited) | `rpt_yyyymm`, `outlet_cd`, `brand_pkg` |
 
 JSON files are JSON Lines (one object per line). Empty daily files (header only, or zero bytes) are normal.
+
+## Load tracking
+
+`_ingest_log` records every file loaded (`bronze_table`, `source_file`, `rows`, `ingested_at`, `batch_id`).
+The notebook only loads files that are not in it yet, so running it twice loads nothing the second time.
+Run it with `reload_all = True` to drop every bronze table and the log and load the whole landing zone again.
