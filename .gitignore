@@ -2,7 +2,18 @@
 target/
 dbt_packages/
 logs/
+prod-artifacts/
+# Personal profiles stay out of git. dbt/profiles.yml is the exception: it reads
+# everything from environment variables and holds no secrets.
 profiles.yml
+!dbt/profiles.yml
+
+# Secrets and local settings
+.env
+.claude/settings.local.json
+
+# Generated source data (recreate with .\tasks.ps1 data)
+data/landing/
 
 # Python virtual envs (bootstrap.ps1 -VenvName)
 .venv*/
@@ -11,3 +22,6 @@ profiles.yml
 __pycache__/
 *.pyc
 .DS_Store
+
+# dbt local user id
+.user.yml

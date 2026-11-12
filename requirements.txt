@@ -1,0 +1,17 @@
+# Local toolchain for the Larkspur & Pine demo. Install with: .\tasks.ps1 venv
+#
+# TODO(spike): pin dbt-fabric (and with it dbt-core) to the version the Fabric
+# dbt job runtime uses in this tenant, so local runs and Fabric runs behave the same.
+# 1.11.1 is what was already installed locally and is kept until the spike says otherwise.
+dbt-fabric==1.11.1
+
+# Lint
+sqlfluff>=4.3,<5
+sqlfluff-templater-dbt>=4.3,<5
+
+# Fabric automation (scripts/)
+azure-identity
+fabric-cicd
+ms-fabric-cli
+pyyaml
+requests
