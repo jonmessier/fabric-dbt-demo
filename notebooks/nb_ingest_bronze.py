@@ -32,6 +32,7 @@
 landing_root = "Files/landing"
 reload_all = False
 table_format = "delta"
+run_id = ""  # set by scripts/load_bronze.py: the summary is also written to Files/_runs/<run_id>.json
 
 # CELL ********************
 
@@ -171,9 +172,14 @@ print(json.dumps(result))
 
 # CELL ********************
 
-# Hand the summary back to the caller (pipeline or scripts/load_bronze.py). Skipped outside Fabric.
+# Hand the summary back to the caller. A pipeline reads the exit value; the job API used by
+# scripts/load_bronze.py does not return it, so the summary is also written to Files/_runs.
+# Skipped outside Fabric.
 try:
     import notebookutils  # noqa: F401  (available in Fabric notebooks)
-    notebookutils.notebook.exit(json.dumps(result))
 except ImportError:
-    pass
+    notebookutils = None
+if notebookutils is not None:
+    if run_id:
+        notebookutils.fs.put(f"Files/_runs/{run_id}.json", json.dumps(result), True)
+    notebookutils.notebook.exit(json.dumps(result))

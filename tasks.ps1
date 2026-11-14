@@ -24,7 +24,10 @@ param(
     [string]$Environment = 'dev',
 
     [int]$Days = 1,
+    [string]$Capacity,
     [switch]$Clean,
+    [switch]$ReloadAll,
+    [switch]$SkipUpload,
     [switch]$WriteSeeds,
     [switch]$Force
 )
@@ -58,6 +61,14 @@ function Invoke-Dbt {
     }
 }
 
+function Invoke-Script {
+    param([string]$Script, [string[]]$ScriptArgs)
+    $py = Get-Python
+    Write-Host "python $Script $($ScriptArgs -join ' ')" -ForegroundColor Cyan
+    & $py (Join-Path $RepoRoot "scripts\$Script") @ScriptArgs
+    Assert-LastExit $Script
+}
+
 function Write-NotYet {
     param([string]$Phase, [string]$Script)
     Write-Host "Not built yet: '$Task' arrives in $Phase ($Script). See docs/DESIGN.md section 9." -ForegroundColor Yellow
@@ -89,10 +100,14 @@ try {
     freshness      dbt source freshness
     docs           dbt docs generate, then serve
 
+  Fabric
+    setup          Create workspace, lakehouse, warehouse, schemas; writes FABRIC_SQL_ENDPOINT
+                   (-Capacity "<name>" saves the capacity to .env on first run)
+    bronze         Upload data\landing to lh_bronze, deploy and run nb_ingest_bronze
+                   (-ReloadAll = rebuild every bronze table, -SkipUpload = notebook only)
+
   Fabric (not built yet)
-    setup          Create workspace, lakehouse, warehouse       (Phase 3)
     identity       App registration, GitHub OIDC, tenant checks  (Phase 3)
-    bronze         Upload landing files and run bronze ingest    (Phase 4)
     reset          Put the demo back to its starting state       (Phase 5)
     deploy         Publish to test/prod with fabric-cicd         (Phase 7)
     teardown       Delete a workspace                            (Phase 7)
@@ -140,9 +155,18 @@ try {
             Push-Location (Join-Path $RepoRoot 'dbt')
             try { & (Join-Path $RepoRoot '.venv\Scripts\sqlfluff.exe') lint models } finally { Pop-Location }
         }
-        'setup'    { Write-NotYet 'Phase 3' 'scripts\provision.py' }
+        'setup' {
+            $a = @('--env', $Environment)
+            if ($Capacity) { $a += @('--capacity', $Capacity) }
+            Invoke-Script 'provision.py' $a
+        }
         'identity' { Write-NotYet 'Phase 3' 'scripts\setup_identity.ps1' }
-        'bronze'   { Write-NotYet 'Phase 4' 'scripts\load_bronze.py' }
+        'bronze' {
+            $a = @('--env', $Environment)
+            if ($ReloadAll) { $a += '--reload-all' }
+            if ($SkipUpload) { $a += '--skip-upload' }
+            Invoke-Script 'load_bronze.py' $a
+        }
         'reset'    { Write-NotYet 'Phase 5' 'scripts\reset_demo.py' }
         'deploy'   { Write-NotYet 'Phase 7' 'scripts\deploy.py' }
         'teardown' { Write-NotYet 'Phase 7' 'scripts\teardown.py' }
