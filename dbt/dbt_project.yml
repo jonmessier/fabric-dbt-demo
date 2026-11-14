@@ -44,6 +44,11 @@ data_tests:
     +store_failures: true
     +schema: audit
 
+# Before and after every run, drop the temporary relations dbt-fabric leaves behind.
+on-run-start:
+  - "{{ drop_dbt_tmp_relations() }}"
+
 # After every run, write one row per node (status, failures, message, time) to audit.dbt_run_log.
 on-run-end:
   - "{{ log_run_results(results) }}"
+  - "{{ drop_dbt_tmp_relations() }}"
