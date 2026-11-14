@@ -138,12 +138,18 @@ try {
         'advance-day' {
             & (Get-Python) 'scripts\generate_data.py' 'advance' '--days' $Days
             Assert-LastExit 'generate_data advance'
-            Write-Host "Local files written. Loading them into bronze arrives in Phase 4." -ForegroundColor Yellow
+            Write-Host "Local files written. Load them with: .	asks.ps1 bronze -Env $Environment, then .	asks.ps1 build" -ForegroundColor Yellow
         }
         'parse'     { Invoke-Dbt @('parse') }
         'debug'     { Invoke-Dbt @('debug') }
         'seed'      { Invoke-Dbt @('seed') }
-        'build'     { Invoke-Dbt @('build', '--selector', 'nightly') }
+        'build' {
+            # A unit test that overrides is_incremental needs its model's table to exist, so a new
+            # environment's first build would fail. --empty creates missing incremental tables with
+            # no rows and leaves existing ones unchanged (docs/SPIKE.md item 8).
+            Invoke-Dbt @('run', '-s', 'config.materialized:incremental', '--empty')
+            Invoke-Dbt @('build', '--selector', 'nightly')
+        }
         'unit'      { Invoke-Dbt @('test', '-s', 'test_type:unit') }
         'freshness' { Invoke-Dbt @('source', 'freshness') }
         'docs' {

@@ -30,10 +30,17 @@ incremental_cutoff as (
 ),
 {% endif %}
 
+-- Import CTE: dbt run --empty wraps each ref in a subquery, so a ref can't carry its own alias.
+unioned as (
+
+    select * from {{ ref('int_sales_lines_unioned') }}
+
+),
+
 sales as (
 
     select unioned.*
-    from {{ ref('int_sales_lines_unioned') }} as unioned
+    from unioned
     {% if is_incremental() %}
     inner join incremental_cutoff
         on unioned._ingested_at > incremental_cutoff.cutoff
