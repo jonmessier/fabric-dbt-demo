@@ -106,6 +106,23 @@ def run_notebook(client: FabricClient, ws_id: str, nb_id: str, params: dict, tim
     raise FabricError(f"notebook still {status} after {timeout_s}s (job {location})")
 
 
+def sync_sql_endpoint(client: FabricClient, ws_id: str, lakehouse_id: str) -> dict:
+    """Make new Delta data visible to the warehouse now. Without this the lakehouse SQL endpoint
+    picks up new rows on its own after ~45 s (docs/SPIKE.md item 18) and dbt could read stale bronze."""
+    lh = client.request("GET", f"workspaces/{ws_id}/lakehouses/{lakehouse_id}", lro=False)
+    endpoint_id = ((lh.get("properties") or {}).get("sqlEndpointProperties") or {}).get("id")
+    if not endpoint_id:
+        raise FabricError("lakehouse has no SQL endpoint yet")
+    started = time.time()
+    result = client.request("POST", f"workspaces/{ws_id}/sqlEndpoints/{endpoint_id}/refreshMetadata",
+                            json_body={})
+    tables = result.get("value", []) if isinstance(result, dict) else []
+    failed = [t.get("tableName") for t in tables if t.get("status") == "Failure"]
+    if failed:
+        raise FabricError(f"SQL endpoint metadata sync failed for: {failed}")
+    return {"seconds": int(time.time() - started), "tables": len(tables)}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--env", required=True, choices=["dev", "test", "prod"])
@@ -144,6 +161,7 @@ def main() -> None:
                 raise FabricError("notebook completed but wrote no run summary (Files/_runs)")
             result = json.loads(raw)
             summary["ingest"] = result
+            summary["sql_endpoint_sync"] = sync_sql_endpoint(client, ws["id"], lh["id"])
             summary["ok"] = bool(result.get("ok"))
         else:
             summary["ok"] = True
