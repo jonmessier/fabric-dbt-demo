@@ -9,7 +9,8 @@ models:
       - name: transaction_status
         data_tests:
           - accepted_values:
-              values: [COMPLETED, REFUNDED]
+              arguments:
+                values: [COMPLETED, REFUNDED]
       - name: total_amount
         data_tests: [non_negative]
 
@@ -25,18 +26,21 @@ models:
         data_tests:
           - not_null
           - relationships:
-              to: ref('stg_pos__transaction')
-              field: transaction_id
+              arguments:
+                to: ref('stg_pos__transaction')
+                field: transaction_id
       - name: sales_category
         data_tests:
           - accepted_values:
-              values: [Draft, To-Go, Merch]
+              arguments:
+                values: [Draft, To-Go, Merch]
       - name: package_code
         description: Serving size as a ref_uom_conversion code. Null for merchandise.
         data_tests:
           - relationships:
-              to: ref('ref_uom_conversion')
-              field: package_code
+              arguments:
+                to: ref('ref_uom_conversion')
+                field: package_code
 
 unit_tests:
   - name: stg_pos__transaction_drops_resent_file_duplicates

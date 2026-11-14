@@ -9,7 +9,8 @@ models:
       - name: batch_status
         data_tests:
           - accepted_values:
-              values: [FERMENTING, PACKAGED]
+              arguments:
+                values: [FERMENTING, PACKAGED]
       - name: actual_volume_bbl
         description: Barrels of wort that went into the fermenter.
         data_tests: [not_null, non_negative]
@@ -21,8 +22,9 @@ models:
         data_tests:
           - not_null
           - relationships:
-              to: ref('stg_prod__batch')
-              field: batch_id
+              arguments:
+                to: ref('stg_prod__batch')
+                field: batch_id
 
   - name: stg_prod__packaging_run
     description: Packaging runs. One row per run (a batch packaged into one item).
@@ -32,13 +34,15 @@ models:
       - name: batch_id
         data_tests:
           - relationships:
-              to: ref('stg_prod__batch')
-              field: batch_id
+              arguments:
+                to: ref('stg_prod__batch')
+                field: batch_id
       - name: item_no
         data_tests:
           - relationships:
-              to: ref('stg_erp__item')
-              field: item_no
+              arguments:
+                to: ref('stg_erp__item')
+                field: item_no
       - name: units_packaged
         data_tests: [non_negative]
 
@@ -48,7 +52,8 @@ models:
       - name: cost_type
         data_tests:
           - accepted_values:
-              values: [INGREDIENTS, LABOR, OVERHEAD, PACKAGING_MATERIALS]
+              arguments:
+                values: [INGREDIENTS, LABOR, OVERHEAD, PACKAGING_MATERIALS]
 
 unit_tests:
   - name: stg_prod__batch_keeps_packaged_version

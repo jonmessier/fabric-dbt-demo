@@ -25,15 +25,17 @@ models:
     description: Distributor; joins to dim_distributor.
     data_tests:
     - relationships:
-        to: ref('dim_distributor')
-        field: distributor_code
+        arguments:
+          to: ref('dim_distributor')
+          field: distributor_code
   - name: brand_code
     data_type: varchar(10)
     description: Brand; joins to dim_brand.
     data_tests:
     - relationships:
-        to: ref('dim_brand')
-        field: brand_code
+        arguments:
+          to: ref('dim_brand')
+          field: brand_code
   - name: shipped_barrels
     data_type: decimal(18,4)
     description: Barrels invoiced to the distributor (sell-in).
@@ -64,8 +66,9 @@ models:
     description: First day of the month as yyyymmdd; joins to dim_date.
     data_tests:
     - relationships:
-        to: ref('dim_date')
-        field: date_key
+        arguments:
+          to: ref('dim_date')
+          field: date_key
   - name: report_month
     data_type: date
   - name: distributor_code
@@ -73,29 +76,33 @@ models:
     description: Distributor; joins to dim_distributor.
     data_tests:
     - relationships:
-        to: ref('dim_distributor')
-        field: distributor_code
+        arguments:
+          to: ref('dim_distributor')
+          field: distributor_code
   - name: retail_account_key
     data_type: varchar(64)
     description: Joins to dim_retail_account.
     data_tests:
     - relationships:
-        to: ref('dim_retail_account')
-        field: retail_account_key
+        arguments:
+          to: ref('dim_retail_account')
+          field: retail_account_key
   - name: product_key
     data_type: varchar(40)
     description: Product; joins to dim_product.
     data_tests:
     - relationships:
-        to: ref('dim_product')
-        field: product_key
+        arguments:
+          to: ref('dim_product')
+          field: product_key
   - name: brand_code
     data_type: varchar(10)
     description: Brand; joins to dim_brand.
     data_tests:
     - relationships:
-        to: ref('dim_brand')
-        field: brand_code
+        arguments:
+          to: ref('dim_brand')
+          field: brand_code
   - name: distributor_sku
     data_type: varchar(40)
     description: The distributor's own product code.

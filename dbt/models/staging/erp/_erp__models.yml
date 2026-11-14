@@ -9,15 +9,17 @@ models:
       - name: customer_type
         data_tests:
           - accepted_values:
-              values: [DISTRIBUTOR, RETAIL, ON_PREMISE, EVENT]
+              arguments:
+                values: [DISTRIBUTOR, RETAIL, ON_PREMISE, EVENT]
       - name: state_raw
         description: State exactly as typed in the ERP.
       - name: state_text
         description: State upper-cased and trimmed, ready to look up in ref_state_region.
         data_tests:
           - relationships:
-              to: ref('ref_state_region')
-              field: state_text
+              arguments:
+                to: ref('ref_state_region')
+                field: state_text
               config:
                 severity: warn   # a new spelling needs a row in the seed; it should not stop the build
 
@@ -30,8 +32,9 @@ models:
         data_tests:
           - not_null
           - relationships:
-              to: ref('ref_uom_conversion')
-              field: package_code
+              arguments:
+                to: ref('ref_uom_conversion')
+                field: package_code
       - name: standard_cost
         data_tests: [non_negative]
 
@@ -45,8 +48,9 @@ models:
         data_tests:
           - not_null
           - relationships:
-              to: ref('stg_erp__item')
-              field: item_no
+              arguments:
+                to: ref('stg_erp__item')
+                field: item_no
       - name: list_price
         data_tests: [not_null, non_negative]
       - name: ending_date
@@ -61,12 +65,14 @@ models:
         data_tests:
           - not_null
           - relationships:
-              to: ref('stg_erp__customer')
-              field: customer_no
+              arguments:
+                to: ref('stg_erp__customer')
+                field: customer_no
       - name: order_status
         data_tests:
           - accepted_values:
-              values: [OPEN, INVOICED, CANCELLED]
+              arguments:
+                values: [OPEN, INVOICED, CANCELLED]
 
   - name: stg_erp__sales_line
     description: Sales order lines. One row per order and line number.
@@ -78,8 +84,9 @@ models:
         data_tests:
           - not_null
           - relationships:
-              to: ref('stg_erp__sales_header')
-              field: order_no
+              arguments:
+                to: ref('stg_erp__sales_header')
+                field: order_no
       - name: quantity
         data_tests: [not_null, non_negative]
       - name: unit_price
@@ -104,18 +111,21 @@ models:
       - name: document_type
         data_tests:
           - accepted_values:
-              values: [INVOICE, CREDIT]
+              arguments:
+                values: [INVOICE, CREDIT]
       - name: item_no
         data_tests:
           - relationships:
-              to: ref('stg_erp__item')
-              field: item_no
+              arguments:
+                to: ref('stg_erp__item')
+                field: item_no
       - name: shipment_no
         description: Shipment the invoice bills for. Null on credit memos.
         data_tests:
           - relationships:
-              to: ref('stg_erp__shipment')
-              field: shipment_no
+              arguments:
+                to: ref('stg_erp__shipment')
+                field: shipment_no
               config:
                 severity: warn   # billing without a shipment record is for finance to review, not a reason to stop
       - name: unit_price

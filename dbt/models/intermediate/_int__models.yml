@@ -40,8 +40,9 @@ models:
         description: Packaged barrels divided by brewed barrels. Null until the batch is packaged.
         data_tests:
           - between:
-              min_value: 0
-              max_value: 1
+              arguments:
+                min_value: 0
+                max_value: 1
               config:
                 severity: error   # more beer out than went in means a keying error; stop production reporting
 

@@ -14,8 +14,9 @@ models:
         data_tests:
           - not_null
           - relationships: &sku_is_mapped
-              to: ref('ref_distributor_sku_xref')
-              field: distributor_sku
+              arguments:
+                to: ref('ref_distributor_sku_xref')
+                field: distributor_sku
               config:
                 severity: warn   # fix by adding the code to seeds/ref_distributor_sku_xref.csv
       - name: quantity
@@ -33,7 +34,8 @@ models:
       - name: unit_type
         data_tests:
           - accepted_values:
-              values: [KEG, CASE]
+              arguments:
+                values: [KEG, CASE]
       - name: quantity
         data_tests: [non_negative]
 

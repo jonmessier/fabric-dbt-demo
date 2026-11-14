@@ -20,15 +20,17 @@ models:
     description: Brand; joins to dim_brand.
     data_tests:
     - relationships:
-        to: ref('dim_brand')
-        field: brand_code
+        arguments:
+          to: ref('dim_brand')
+          field: brand_code
   - name: brew_date_key
     data_type: int
     description: Brew date as yyyymmdd; joins to dim_date.
     data_tests:
     - relationships:
-        to: ref('dim_date')
-        field: date_key
+        arguments:
+          to: ref('dim_date')
+          field: date_key
   - name: package_date_key
     data_type: int
     description: Packaging date as yyyymmdd; null until packaged.
@@ -56,8 +58,9 @@ models:
     description: Packaged barrels / brewed barrels.
     data_tests:
     - between:
-        min_value: 0
-        max_value: 1
+        arguments:
+          min_value: 0
+          max_value: 1
   - name: units_packaged
     data_type: int
   - name: ingredient_cost
