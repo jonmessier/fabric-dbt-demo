@@ -170,5 +170,5 @@ unit_tests:
           - {invoice_no: CM-1, invoice_line_no: "10000", document_type: CREDIT, quantity: "-2", unit_price: "38.00", line_discount_pct: "0.0", line_amount: "-76.00", shipment_no: "", _ingested_at: "2026-11-03 02:00:00"}
     expect:
       rows:
-        - {invoice_no: INV-1, is_credit: false, quantity: 10, line_amount: 380.00, shipment_no: SH-1}
-        - {invoice_no: CM-1, is_credit: true, quantity: -2, line_amount: -76.00, shipment_no: null}
+        - {invoice_no: INV-1, is_credit: 0, quantity: 10, line_amount: 380.00, shipment_no: SH-1}
+        - {invoice_no: CM-1, is_credit: 1, quantity: -2, line_amount: -76.00, shipment_no: null}

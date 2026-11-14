@@ -16,11 +16,27 @@
 -- Cost: ERP lines use the item's standard cost; taproom pours use the brand's standard cost per
 -- barrel. Merchandise has no cost here, so no margin.
 
-with sales as (
+with
 
-    select * from {{ ref('int_sales_lines_unioned') }}
+{% if is_incremental() %}
+-- The cutoff is its own CTE, joined below, rather than a subquery in the where clause: Fabric
+-- cannot resolve {{ this }} from a subquery when dbt nests the model in CTEs (unit tests, contracts).
+-- An empty table (created with dbt run --empty in a new environment) loads everything.
+incremental_cutoff as (
+
+    select coalesce(dateadd(day, -3, max(_ingested_at)), cast('1900-01-01' as datetime2(6))) as cutoff
+    from {{ this }}
+
+),
+{% endif %}
+
+sales as (
+
+    select unioned.*
+    from {{ ref('int_sales_lines_unioned') }} as unioned
     {% if is_incremental() %}
-    where _ingested_at > (select dateadd(day, -3, max(_ingested_at)) from {{ this }})
+    inner join incremental_cutoff
+        on unioned._ingested_at > incremental_cutoff.cutoff
     {% endif %}
 
 ),

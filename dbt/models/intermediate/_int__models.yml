@@ -71,8 +71,8 @@ unit_tests:
     given:
       - input: ref('stg_erp__invoice_line')
         rows:
-          - {invoice_no: INV-1, invoice_line_no: 10000, invoice_date: "2026-10-05", customer_no: D-1001, item_no: NSL-K50, is_credit: false, quantity: 4, line_amount: 540.00}
-          - {invoice_no: CM-1, invoice_line_no: 10000, invoice_date: "2026-10-20", customer_no: C-2001, item_no: NSL-C16, is_credit: true, quantity: -2, line_amount: -76.00}
+          - {invoice_no: INV-1, invoice_line_no: 10000, invoice_date: "2026-10-05", customer_no: D-1001, item_no: NSL-K50, is_credit: 0, quantity: 4, line_amount: 540.00}
+          - {invoice_no: CM-1, invoice_line_no: 10000, invoice_date: "2026-10-20", customer_no: C-2001, item_no: NSL-C16, is_credit: 1, quantity: -2, line_amount: -76.00}
       - input: ref('stg_erp__item')
         rows:
           - {item_no: NSL-K50, brand_code: NSL, package_code: KEG-HALF, standard_cost: 75.00}
@@ -106,8 +106,9 @@ unit_tests:
           - {source_system: POS, customer_type: TAPROOM, channel: Taproom}
     expect:
       rows:
-        - {sales_line_key: "ERP|INV-1|10000", channel: Wholesale, state_code: MN, barrels: 2.0000, standard_cost_amount: 300.00}
-        - {sales_line_key: "ERP|CM-1|10000", channel: "Direct - On premise", state_code: MN, barrels: -0.1935, standard_cost_amount: -34.00}
+        # Every row lists the same columns: dbt-fabric unions the rows as written (docs/SPIKE.md item 5).
+        - {sales_line_key: "ERP|INV-1|10000", product_code: NSL-K50, product_name: null, channel: Wholesale, state_code: MN, barrels: 2.0000, standard_cost_amount: 300.00}
+        - {sales_line_key: "ERP|CM-1|10000", product_code: NSL-C16, product_name: null, channel: "Direct - On premise", state_code: MN, barrels: -0.1935, standard_cost_amount: -34.00}
         - {sales_line_key: "POS|T-1|1", product_code: PBI-POUR-16, product_name: "Pine Barrens IPA, 16 oz draft pour", channel: Taproom, state_code: MN, barrels: 0.0081, standard_cost_amount: null}
         - {sales_line_key: "POS|T-1|2", product_code: MERCH-HAT, product_name: Pine Trucker Hat, channel: Taproom, state_code: MN, barrels: null, standard_cost_amount: null}
 
@@ -133,8 +134,8 @@ unit_tests:
           - {package_code: KEG-HALF, barrels: 0.5, case_equivalents: 6.8889}
     expect:
       rows:
-        - {distributor_sku: NB20004, account_name: Copper Kettle Tavern, item_no: NSL-K50, is_sku_mapped: true, barrels: 3.0000}
-        - {distributor_sku: NB99999, account_name: Copper Kettle Tavern, item_no: null, is_sku_mapped: false, barrels: null}
+        - {distributor_sku: NB20004, account_name: Copper Kettle Tavern, item_no: NSL-K50, is_sku_mapped: 1, barrels: 3.0000}
+        - {distributor_sku: NB99999, account_name: Copper Kettle Tavern, item_no: null, is_sku_mapped: 0, barrels: null}
 
   - name: int_batch_summary_computes_yield_and_cost_per_barrel
     description: >
@@ -170,9 +171,9 @@ unit_tests:
     given:
       - input: ref('stg_erp__invoice_line')
         rows:
-          - {invoice_no: INV-1, invoice_line_no: 10000, invoice_date: "2026-10-30", order_no: SO-1, customer_no: C-1, item_no: PBI-C16, is_credit: false, quantity: 10, unit_price: 41.80, line_discount_pct: 10.0, line_amount: 376.20}
-          - {invoice_no: INV-2, invoice_line_no: 10000, invoice_date: "2026-11-04", order_no: SO-2, customer_no: C-1, item_no: PBI-C16, is_credit: false, quantity: 10, unit_price: 39.60, line_discount_pct: 0.0, line_amount: 396.00}
-          - {invoice_no: CM-1, invoice_line_no: 10000, invoice_date: "2026-11-05", order_no: SO-1, customer_no: C-1, item_no: PBI-C16, is_credit: true, quantity: -1, unit_price: 41.80, line_discount_pct: 0.0, line_amount: -41.80}
+          - {invoice_no: INV-1, invoice_line_no: 10000, invoice_date: "2026-10-30", order_no: SO-1, customer_no: C-1, item_no: PBI-C16, is_credit: 0, quantity: 10, unit_price: 41.80, line_discount_pct: 10.0, line_amount: 376.20}
+          - {invoice_no: INV-2, invoice_line_no: 10000, invoice_date: "2026-11-04", order_no: SO-2, customer_no: C-1, item_no: PBI-C16, is_credit: 0, quantity: 10, unit_price: 39.60, line_discount_pct: 0.0, line_amount: 396.00}
+          - {invoice_no: CM-1, invoice_line_no: 10000, invoice_date: "2026-11-05", order_no: SO-1, customer_no: C-1, item_no: PBI-C16, is_credit: 1, quantity: -1, unit_price: 41.80, line_discount_pct: 0.0, line_amount: -41.80}
       - input: ref('stg_erp__sales_header')
         rows:
           - {order_no: SO-1, order_date: "2026-10-28"}
