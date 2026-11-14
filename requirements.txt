@@ -1,9 +1,10 @@
-# Local toolchain for the Larkspur & Pine demo. Install with: .\tasks.ps1 venv
+# Local toolchain for the Larkspur & Pine demo. Install with: .	asks.ps1 venv
 #
-# TODO(spike): pin dbt-fabric (and with it dbt-core) to the version the Fabric
-# dbt job runtime uses in this tenant, so local runs and Fabric runs behave the same.
-# 1.11.1 is what was already installed locally and is kept until the spike says otherwise.
-dbt-fabric==1.11.1
+# Pinned to the Fabric dbt job runtime V1.0 (docs/SPIKE.md item 1): dbt-core 1.11 with
+# dbt-fabric 1.10.0. That runtime uses Python 3.12; the local venv is 3.11, which both packages support.
+# dbt-fabric 1.10.0 connects through pyodbc, so "ODBC Driver 18 for SQL Server" must be installed.
+dbt-core~=1.11.0
+dbt-fabric==1.10.0
 
 # Lint
 sqlfluff>=4.3,<5

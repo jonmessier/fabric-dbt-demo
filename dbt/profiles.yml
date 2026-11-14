@@ -6,7 +6,8 @@ lpb:
   outputs:
     dev: &fabric
       type: fabric
-      # TODO(spike): dbt-fabric 1.11+ bundles its own driver; confirm whether this line is still needed.
+      # Required by dbt-fabric 1.10 (pyodbc), the Fabric dbt job runtime version (docs/SPIKE.md item 2).
+      # dbt-fabric 1.11+ bundles mssql-python and no longer needs it.
       driver: "ODBC Driver 18 for SQL Server"
       server: "{{ env_var('FABRIC_SQL_ENDPOINT', 'set-FABRIC_SQL_ENDPOINT-in-.env') }}"
       port: 1433

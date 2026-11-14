@@ -256,13 +256,17 @@ class OneLake:
 
 # --------------------------------------------------------------------------- SQL (warehouse)
 
+ODBC_DRIVER = "ODBC Driver 18 for SQL Server"
+
+
 def sql_connect(server: str, database: str, tokens: TokenCache):
-    """Connect to a Fabric SQL endpoint with the az login token, the way dbt-fabric does
-    (mssql-python, which bundles its own driver; no ODBC install needed)."""
-    import mssql_python
+    """Connect to a Fabric SQL endpoint with the az login token, the way dbt-fabric 1.10 does
+    (pyodbc + ODBC Driver 18, token passed as SQL_COPT_SS_ACCESS_TOKEN)."""
+    import pyodbc
 
     token = tokens.get(SQL_SCOPE).encode("utf-8")
     encoded = bytes(chain.from_iterable(zip(token, repeat(0))))
     attrs_before = {1256: struct.pack("<i", len(encoded)) + encoded}  # SQL_COPT_SS_ACCESS_TOKEN
-    conn_str = f"Server={server},1433;Database={database};Encrypt=yes;TrustServerCertificate=no"
-    return mssql_python.connect(conn_str, attrs_before=attrs_before, autocommit=True, timeout=60)
+    conn_str = (f"Driver={{{ODBC_DRIVER}}};Server={server},1433;Database={database};"
+                f"Encrypt=yes;TrustServerCertificate=no")
+    return pyodbc.connect(conn_str, attrs_before=attrs_before, autocommit=True, timeout=60)

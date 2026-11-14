@@ -43,7 +43,7 @@ Add-Check '.env file' (Test-Path (Join-Path $root '.env')) 'Copy .env.example to
 # dbt-fabric 1.11+ ships its own SQL driver; older versions need this one. The spike confirms which applies.
 $odbc = $null
 try { $odbc = Get-OdbcDriver -Name 'ODBC Driver 18 for SQL Server' -ErrorAction Stop } catch { }
-Add-Check 'ODBC Driver 18 for SQL Server' ($null -ne $odbc) 'optional unless the spike shows dbt-fabric needs it' $false
+Add-Check 'ODBC Driver 18 for SQL Server' ($null -ne $odbc) $(if ($odbc) { 'found' } else { 'not found. dbt-fabric 1.10 (pyodbc) needs it: winget install Microsoft.msodbcsql.18' })
 
 $acct = $null
 if (Get-Command az -ErrorAction SilentlyContinue) {
