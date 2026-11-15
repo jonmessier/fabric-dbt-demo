@@ -48,6 +48,7 @@ Use `.\tasks.ps1` as the entry point (`.\tasks.ps1 help` lists everything; tasks
 - SQL dialect is T-SQL (Fabric Warehouse). No `LIMIT` (use `TOP`), no `ILIKE`, no `::` casts. sqlfluff config is `dbt/.sqlfluff`.
 - Read a ref through an import CTE (`x as (select * from {{ ref('x') }})`), never `{{ ref('x') }} as x`: `--empty` wraps refs in an aliased subquery.
 - Unit test fixtures: write `bit` values as `1`/`0` (not `true`/`false`), and give every `expect` row the same columns (Fabric, docs/SPIKE.md item 5).
+- dbt ignores `--select`/`--exclude` when `--selector` is given; to exclude something from "everything", drop the selector.
 - The Fabric dbt job ignores `selector`; it only takes `select`/`exclude`/`threads`. Keep `nightly` equal to "everything", or express changes as select/exclude in `scripts/dbt_job.py`.
 - Bronze is loaded by `notebooks/nb_ingest_bronze.py` and must match `docs/BRONZE.md` (all strings, lower snake_case, `_source_file`/`_landed_date`/`_ingested_at`). Change the doc and the notebook together.
 - Source data comes from `scripts/generate_data.py` (stdlib only, deterministic). Read its docstring before changing staging models; `-WriteSeeds` overwrites hand edits in `dbt/seeds`.

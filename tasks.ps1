@@ -157,7 +157,7 @@ try {
         'advance-day' {
             & (Get-Python) 'scripts\generate_data.py' 'advance' '--days' $Days
             Assert-LastExit 'generate_data advance'
-            Write-Host "Local files written. Load them with: .	asks.ps1 bronze -Env $Environment, then .	asks.ps1 build" -ForegroundColor Yellow
+            Write-Host "Local files written. Load them with: .\tasks.ps1 bronze -Env $Environment, then .\tasks.ps1 build" -ForegroundColor Yellow
         }
         'parse'     { Invoke-Dbt @('parse') }
         'debug'     { Invoke-Dbt @('debug') }
@@ -166,7 +166,8 @@ try {
             if ($FirstBuild) {
                 # Empty warehouse (new environment, or after reset): the fct_sales_line unit test reads
                 # {{ this }}, which doesn't exist yet. Build everything without unit tests, then run them.
-                Invoke-Dbt @('build', '--selector', 'nightly', '--exclude', 'test_type:unit') -AllowTestFailures
+                # No --selector here: dbt ignores --exclude when --selector is given (nightly = everything).
+                Invoke-Dbt @('build', '--exclude', 'test_type:unit') -AllowTestFailures
                 Invoke-Dbt @('test', '-s', 'test_type:unit')
             } else {
                 # --empty creates a missing incremental table with no rows when its parents exist
@@ -231,7 +232,7 @@ Run again with -Yes to do it.
             Assert-LastExit 'generate_data backfill'
             Invoke-Script 'reset_demo.py' @('--env', $Environment, '--confirm')
             if ($Environment -eq 'dev') {
-                Invoke-Dbt @('build', '--selector', 'nightly', '--exclude', 'test_type:unit') -AllowTestFailures
+                Invoke-Dbt @('build', '--exclude', 'test_type:unit') -AllowTestFailures
                 Invoke-Dbt @('test', '-s', 'test_type:unit')
             } else {
                 Write-Host "Local dbt targets dev only. Rebuild $Environment with its pipeline or dbt job." -ForegroundColor Yellow
