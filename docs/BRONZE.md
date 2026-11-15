@@ -48,6 +48,9 @@ JSON files are JSON Lines (one object per line). Empty daily files (header only,
 `_ingest_log` records every file loaded (`bronze_table`, `source_file`, `rows`, `ingested_at`, `batch_id`).
 The notebook only loads files that are not in it yet, so running it twice loads nothing the second time.
 Run it with `reload_all = True` to drop every bronze table and the log and load the whole landing zone again.
+In Fabric the notebook turns `landing_root` and `Files/_runs` into absolute `abfss://` paths for the default
+lakehouse (from the session's Spark conf) before it drops anything. Relative paths stop resolving to the
+lakehouse after the drops (docs/SPIKE.md item 23).
 
 Each run returns a JSON summary (files and rows per table) as the notebook exit value, for a pipeline.
 When the `run_id` parameter is set (as `scripts/load_bronze.py` does), the same summary is also written to

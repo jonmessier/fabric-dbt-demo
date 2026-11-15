@@ -48,6 +48,25 @@ spark = SparkSession.builder.getOrCreate()
 
 LOG_TABLE = "_ingest_log"
 
+
+def lakehouse_path(path: str) -> str:
+    """Make a lakehouse-relative path ("Files/...") absolute. In Fabric, fs.defaultFS is the workspace
+    root, and relative paths only reach the default lakehouse through the session's working directory.
+    After `reload_all` drops the tables, that working directory falls back to /user/trusted-service-user
+    and OneLake rejects the path (docs/SPIKE.md item 23). Resolved from the session's own conf, so no IDs
+    go into git. Locally (no trident conf) the path is returned unchanged."""
+    if re.match(r"^[a-z][a-z0-9+.-]*://", path):
+        return path
+    ws_id = spark.conf.get("trident.workspace.id", None)
+    lh_id = spark.conf.get("trident.lakehouse.id", None)
+    if not (ws_id and lh_id):
+        return path
+    return f"abfss://{ws_id}@onelake.dfs.fabric.microsoft.com/{lh_id}/{path.lstrip('/')}"
+
+
+landing_root = lakehouse_path(landing_root)
+runs_root = lakehouse_path("Files/_runs")
+
 # bronze table -> (file pattern under the landing root, reader)
 FEEDS = {
     "erp_customer": ("erp/*/customer.csv", "csv"),
@@ -181,5 +200,5 @@ except ImportError:
     notebookutils = None
 if notebookutils is not None:
     if run_id:
-        notebookutils.fs.put(f"Files/_runs/{run_id}.json", json.dumps(result), True)
+        notebookutils.fs.put(f"{runs_root}/{run_id}.json", json.dumps(result), True)
     notebookutils.notebook.exit(json.dumps(result))
