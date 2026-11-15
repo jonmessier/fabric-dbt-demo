@@ -10,9 +10,11 @@ Deploys, by name (IDs are looked up at run time, never stored in git):
   * nb_ingest_bronze  from notebooks/nb_ingest_bronze.py, lh_bronze as default lakehouse
   * nb_dbt_freshness  from notebooks/nb_dbt_freshness.py (refreshes the SQL endpoint, runs
                       dbt source freshness with the project taken from dbt_lpb; fails on errors)
-  * pl_daily_load     the two notebook activities above. Activities this script does not own (the dbt job
-                      activity, added once in the Fabric UI because it needs a connection) are kept as they
-                      are, and the freshness activity is put in front of them.
+  * pl_daily_load     the three activities above. The dbt one (InvokeDataBuildToolJob, selector nightly) needs
+                      a Fabric connection of type DataBuildToolJob, which is created in the UI (OAuth) or
+                      for a service principal. It is found by name from config environments.<env>.dbt_connection,
+                      or else the connection the pipeline already uses is kept. Activities this script does
+                      not own (added in the UI) are kept and run after freshness.
 The dbt job itself is deployed by scripts/dbt_job.py.
 
 With --run: upload new landing files first (as load_bronze.py does, unless --skip-upload), run the
@@ -37,7 +39,10 @@ FRESHNESS_SRC = REPO_ROOT / "notebooks" / "nb_dbt_freshness.py"
 FRESHNESS_NOTEBOOK = "nb_dbt_freshness"
 INGEST_ACTIVITY = "Ingest bronze"
 FRESHNESS_ACTIVITY = "Check source freshness"
-OWNED = (INGEST_ACTIVITY, FRESHNESS_ACTIVITY)
+DBT_ACTIVITY = "Build with dbt"
+DBT_ACTIVITY_TYPE = "InvokeDataBuildToolJob"
+DBT_SELECTOR = "nightly"
+OWNED = (INGEST_ACTIVITY, FRESHNESS_ACTIVITY, DBT_ACTIVITY)
 
 
 def check_dbt_pins() -> None:
@@ -66,17 +71,53 @@ def notebook_activity(name: str, ws_id: str, notebook_id: str, depends_on: list[
     }
 
 
-def pipeline_definition(ws_id: str, ingest_id: str, freshness_id: str, existing: list[dict]) -> dict:
+def dbt_activity(ws_id: str, dbt_job_id: str, connection_id: str) -> dict:
+    """The dbt job activity, as the pipeline editor writes it (read back 2026-11-15, docs/SPIKE.md item 22)."""
+    return {
+        "name": DBT_ACTIVITY,
+        "type": DBT_ACTIVITY_TYPE,
+        "dependsOn": [{"activity": FRESHNESS_ACTIVITY, "dependencyConditions": ["Succeeded"]}],
+        "policy": {"timeout": "0.02:00:00", "retry": 0, "retryIntervalInSeconds": 30,
+                   "secureOutput": False, "secureInput": False},
+        "typeProperties": {"dataBuildToolJobId": dbt_job_id, "workspaceId": ws_id, "operation": "build",
+                           "threads": 4, "selectorName": DBT_SELECTOR},
+        "externalReferences": {"connection": connection_id},
+    }
+
+
+def dbt_connection_id(client: FabricClient, cfg: dict, existing: list[dict]) -> tuple[str, str]:
+    """(connection id, how it was found). Connections are tenant-level and created outside this script."""
+    name = cfg.get("dbt_connection")
+    if name:
+        conn = client.find("connections", name)
+        if conn is None:
+            raise FabricError(f"connection '{name}' (config dbt_connection) not found or not shared with you")
+        return conn["id"], f"config: {name}"
+    for act in existing:
+        conn_id = (act.get("externalReferences") or {}).get("connection")
+        if act.get("type") == DBT_ACTIVITY_TYPE and conn_id:
+            return conn_id, "kept from the existing pipeline"
+    raise FabricError("no connection for the dbt job activity. Create a 'DataBuildToolJob' connection in Fabric "
+                      "(pipeline editor > dbt job activity > Connection > New) and set dbt_connection in "
+                      "config/environments.yml, or add the activity once in the UI")
+
+
+def pipeline_definition(ws_id: str, ingest_id: str, freshness_id: str, dbt_job_id: str, connection_id: str,
+                        existing: list[dict]) -> dict:
     activities = [
         notebook_activity(INGEST_ACTIVITY, ws_id, ingest_id, [], "0.01:00:00"),
         notebook_activity(FRESHNESS_ACTIVITY, ws_id, freshness_id, [INGEST_ACTIVITY], "0.00:30:00"),
+        dbt_activity(ws_id, dbt_job_id, connection_id),
     ]
+    # Any dbt job activity already there (whatever its name) is replaced by ours.
+    replaced = {a.get("name") for a in existing if a.get("type") == DBT_ACTIVITY_TYPE}
     for act in existing:
-        if act.get("name") in OWNED:
+        if act.get("name") in OWNED or act.get("name") in replaced:
             continue
-        deps = [d for d in act.get("dependsOn", []) if d.get("activity") not in OWNED]
-        if not act.get("dependsOn") or len(deps) != len(act.get("dependsOn", [])):
-            # A first-level activity (e.g. the dbt job added in the UI) runs after freshness.
+        deps = [{**d, "activity": DBT_ACTIVITY} if d.get("activity") in replaced else d
+                for d in act.get("dependsOn", [])]
+        if not deps:
+            # Other first-level activities (added in the UI) run after freshness.
             deps.append({"activity": FRESHNESS_ACTIVITY, "dependencyConditions": ["Succeeded"]})
         activities.append({**act, "dependsOn": deps})
     content = {"properties": {"description": "Daily load: bronze ingest, source freshness, dbt build. "
@@ -96,19 +137,22 @@ def existing_activities(client: FabricClient, ws_id: str, pipeline: dict | None)
     return []
 
 
-def ensure_pipeline(client: FabricClient, ws_id: str, name: str, ingest_id: str, freshness_id: str) -> tuple[dict, str, list]:
+def ensure_pipeline(client: FabricClient, ws_id: str, name: str, ingest_id: str, freshness_id: str,
+                    dbt_job_id: str, cfg: dict) -> tuple[dict, str, list, str]:
     pl = client.item(ws_id, "dataPipelines", name, required=False)
-    definition = pipeline_definition(ws_id, ingest_id, freshness_id, existing_activities(client, ws_id, pl))
+    existing = existing_activities(client, ws_id, pl)
+    connection_id, found = dbt_connection_id(client, cfg, existing)
+    definition = pipeline_definition(ws_id, ingest_id, freshness_id, dbt_job_id, connection_id, existing)
     names = [a["name"] for a in json.loads(base64.b64decode(definition["parts"][0]["payload"]))["properties"]["activities"]]
     if pl is None:
         log(f"Creating pipeline {name}")
         client.request("POST", f"workspaces/{ws_id}/dataPipelines",
                        json_body={"displayName": name, "definition": definition})
-        return client.item(ws_id, "dataPipelines", name), "created", names
+        return client.item(ws_id, "dataPipelines", name), "created", names, found
     log(f"Updating pipeline {name}")
     client.request("POST", f"workspaces/{ws_id}/dataPipelines/{pl['id']}/updateDefinition",
                    json_body={"definition": definition})
-    return pl, "updated", names
+    return pl, "updated", names, found
 
 
 def run_pipeline(client: FabricClient, ws_id: str, pl_id: str, timeout_s: int) -> dict:
@@ -175,15 +219,17 @@ def main() -> None:
         client = FabricClient(tokens)
         ws = client.workspace(cfg["workspace"])
         lh = client.item(ws["id"], "lakehouses", cfg["items"]["lakehouse"])
-        if client.item(ws["id"], "items", cfg["items"]["dbt_job"], required=False) is None:
+        dbt_job = client.item(ws["id"], "items", cfg["items"]["dbt_job"], required=False)
+        if dbt_job is None:
             raise FabricError(f"dbt job {cfg['items']['dbt_job']} not found. Run: .\\tasks.ps1 dbt-job -Env {args.env}")
 
         ingest, a1 = deploy_notebook(client, ws["id"], cfg["items"]["ingest_notebook"],
                                      notebook_source(NOTEBOOK_SRC, ws["id"], lh))
         fresh, a2 = deploy_notebook(client, ws["id"], FRESHNESS_NOTEBOOK, notebook_source(FRESHNESS_SRC, ws["id"]))
-        pl, a3, names = ensure_pipeline(client, ws["id"], cfg["items"]["pipeline"], ingest["id"], fresh["id"])
+        pl, a3, names, conn = ensure_pipeline(client, ws["id"], cfg["items"]["pipeline"], ingest["id"], fresh["id"],
+                                              dbt_job["id"], cfg)
         summary["deployed"] = {cfg["items"]["ingest_notebook"]: a1, FRESHNESS_NOTEBOOK: a2,
-                               cfg["items"]["pipeline"]: a3, "activities": names}
+                               cfg["items"]["pipeline"]: a3, "activities": names, "dbt_connection": conn}
 
         if args.run:
             if not args.skip_upload:

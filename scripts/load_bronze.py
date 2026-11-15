@@ -79,6 +79,13 @@ def deploy_notebook(client: FabricClient, ws_id: str, name: str, source: str) ->
         client.request("POST", f"workspaces/{ws_id}/notebooks",
                        json_body={"displayName": name, "definition": definition})
         return client.item(ws_id, "notebooks", name), "created"
+    # Updating a notebook while it runs can drop the running session's default lakehouse: relative
+    # paths then resolve to user/trusted-service-user/... and the run fails (seen 2026-11-15, SPIKE item 23).
+    jobs = client.request("GET", f"workspaces/{ws_id}/items/{nb['id']}/jobs/instances", lro=False).get("value", [])
+    running = [j for j in jobs if j.get("status") in ("NotStarted", "InProgress")]
+    if running:
+        raise FabricError(f"notebook {name} is running (job {running[0].get('id')}, started "
+                          f"{running[0].get('startTimeUtc')}); not updating it. Try again when it finishes.")
     log(f"Updating notebook {name}")
     client.request("POST", f"workspaces/{ws_id}/notebooks/{nb['id']}/updateDefinition",
                    json_body={"definition": definition})
