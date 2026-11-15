@@ -50,20 +50,21 @@ def upload_landing(lake: OneLake, lakehouse_id: str, landing_path: str) -> dict:
             "bytes": sum(local[r].stat().st_size for r in todo)}
 
 
-def notebook_source(ws_id: str, lakehouse: dict) -> str:
-    """The notebook source with lh_bronze set as default lakehouse in its METADATA block."""
-    src = NOTEBOOK_SRC.read_text(encoding="utf-8")
-    deps = {"lakehouse": {"default_lakehouse": lakehouse["id"],
-                          "default_lakehouse_name": lakehouse["displayName"],
-                          "default_lakehouse_workspace_id": ws_id}}
-    meta = {"kernel_info": {"name": "synapse_pyspark"}, "dependencies": deps}
+def notebook_source(path: Path, ws_id: str, lakehouse: dict | None = None) -> str:
+    """A notebook's source with its notebook-level METADATA block rewritten: the kernel from the file
+    is kept, and `lakehouse` (if given) is attached as default lakehouse. IDs never go into git."""
+    src = path.read_text(encoding="utf-8")
+    m = re.search(r"(# METADATA \*+\n\n)((?:# META.*\n)+)", src)
+    if not m:
+        raise FabricError(f"{path.name}: notebook METADATA block not found")
+    meta = json.loads("\n".join(line[len("# META"):] for line in m.group(2).splitlines()))
+    meta["dependencies"] = {}
+    if lakehouse is not None:
+        meta["dependencies"]["lakehouse"] = {"default_lakehouse": lakehouse["id"],
+                                             "default_lakehouse_name": lakehouse["displayName"],
+                                             "default_lakehouse_workspace_id": ws_id}
     meta_lines = "\n".join(f"# META {line}" for line in json.dumps(meta, indent=2).splitlines())
-    # Replace the first (notebook-level) META block only.
-    new, n = re.subn(r"(# METADATA \*+\n\n)((?:# META.*\n)+)", lambda m: m.group(1) + meta_lines + "\n",
-                     src, count=1)
-    if n != 1:
-        raise FabricError(f"{NOTEBOOK_SRC.name}: notebook METADATA block not found")
-    return new
+    return src[:m.start(2)] + meta_lines + "\n" + src[m.end(2):]
 
 
 def deploy_notebook(client: FabricClient, ws_id: str, name: str, source: str) -> tuple[dict, str]:
@@ -145,7 +146,7 @@ def main() -> None:
             summary["upload"] = upload_landing(lake, lh["id"], cfg["landing_path"])
 
         nb, action = deploy_notebook(client, ws["id"], cfg["items"]["ingest_notebook"],
-                                     notebook_source(ws["id"], lh))
+                                     notebook_source(NOTEBOOK_SRC, ws["id"], lh))
         summary["notebook"] = action
 
         if not args.no_run:
