@@ -28,6 +28,7 @@ param(
     [switch]$Clean,
     [switch]$ReloadAll,
     [switch]$SkipUpload,
+    [switch]$Run,
     [switch]$WriteSeeds,
     [switch]$Force
 )
@@ -105,6 +106,8 @@ try {
                    (-Capacity "<name>" saves the capacity to .env on first run)
     bronze         Upload data\landing to lh_bronze, deploy and run nb_ingest_bronze
                    (-ReloadAll = rebuild every bronze table, -SkipUpload = notebook only)
+    dbt-job        Publish dbt\ as the Fabric dbt job dbt_lpb (dbt build, all nodes)
+                   (-Run = also run it in Fabric and print its dbt version and results)
 
   Fabric (not built yet)
     identity       App registration, GitHub OIDC, tenant checks  (Phase 3)
@@ -172,6 +175,11 @@ try {
             if ($ReloadAll) { $a += '--reload-all' }
             if ($SkipUpload) { $a += '--skip-upload' }
             Invoke-Script 'load_bronze.py' $a
+        }
+        'dbt-job' {
+            $a = @('--env', $Environment)
+            if ($Run) { $a += '--run' }
+            Invoke-Script 'dbt_job.py' $a
         }
         'reset'    { Write-NotYet 'Phase 5' 'scripts\reset_demo.py' }
         'deploy'   { Write-NotYet 'Phase 7' 'scripts\deploy.py' }
