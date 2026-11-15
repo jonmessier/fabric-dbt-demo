@@ -29,10 +29,12 @@ Use `.\tasks.ps1` as the entry point (`.\tasks.ps1 help` lists everything; tasks
 | Simulate next business day | `.\tasks.ps1 advance-day -Env dev` |
 | Full build | `.\tasks.ps1 build` (= `dbt run --empty` for missing incremental tables, then `dbt build --selector nightly`) |
 | Publish / run the Fabric dbt job | `.\tasks.ps1 dbt-job -Env dev` (`-Run` also runs it in Fabric) |
+| Deploy / run the daily pipeline | `.\tasks.ps1 pipeline -Env dev` (`-Run` uploads new landing files and runs it) |
+| First build into an empty warehouse | `.\tasks.ps1 build -FirstBuild` (unit tests after the models) |
 | Freshness | `dbt source freshness` |
 | Unit tests only | `dbt test -s test_type:unit` |
 | Check your work after a model change | `dbt parse` then `dbt build -s <model>+` (or `-s state:modified+ --defer --state ..\prod-artifacts`) |
-| Reset demo to "act 1" | `.\tasks.ps1 reset -Env dev` |
+| Reset demo to "act 1" | `.\tasks.ps1 reset -Env dev -Yes` (regenerates landing, reloads bronze, empties the dbt schemas, rebuilds) |
 | Deploy | `.\tasks.ps1 deploy -Env test` |
 
 ## dbt conventions
