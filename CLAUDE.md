@@ -56,6 +56,6 @@ Use `.\tasks.ps1` as the entry point (`.\tasks.ps1 help` lists everything; tasks
 - Do run `dbt parse` after editing YAML and build the smallest selection that proves the change.
 - Do update `docs/DESIGN.md` (and add an ADR in `docs/decisions/`) when a design decision changes.
 - Do record spike findings in `docs/SPIKE.md`.
-- Don't push to `main` directly; work on a branch and open a PR.
+- The repo is local only for now: commit on the branch, never `git push`, and don't set up Fabric Git sync or GitHub workflows until a remote is chosen.
 - Don't run anything against `LPB-Data-Prod` unless explicitly asked.
 - Don't edit files under `fabric/` by hand unless the task is about Fabric item definitions; they are synced from the Dev workspace.
