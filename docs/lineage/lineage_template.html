@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<!-- Template for scripts/build_lineage.py. The script replaces the DATA placeholder below with the
+     graph built from dbt/target/manifest.json and run results. Edit layout and styling here. -->
+<style>
+  :root {
+    --bg: #f7f6f2; --panel: #ffffff; --ink: #1f2328; --muted: #6b7078; --line: #d9d6cf;
+    --bronze: #a8643a; --seed: #2c7a7b; --silver: #6b7a8f; --gold: #b7860b; --expo: #5a4fcf;
+    --pass: #2f855a; --warn: #c27c0e; --error: #c53030; --skip: #9aa0a6; --none: #c9c6bf;
+    --hl: #1f6feb;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 14px/1.4 "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif; }
+  header { padding: 14px 22px 10px; border-bottom: 1px solid var(--line); background: var(--panel);
+    display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: -.01em; }
+  header .sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .stats { display: flex; gap: 14px; margin-left: auto; flex-wrap: wrap; }
+  .stat { text-align: right; }
+  .stat b { display: block; font-size: 20px; font-weight: 650; line-height: 1.1; }
+  .stat span { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; }
+  .toolbar { display: flex; gap: 8px; align-items: center; padding: 10px 22px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line); background: #fbfaf7; }
+  .toolbar .lbl { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; margin-right: 2px; }
+  .chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 5px 12px;
+    font: inherit; font-size: 13px; cursor: pointer; color: var(--ink); display: inline-flex; gap: 6px; align-items: center; }
+  .chip:hover { border-color: #b9b5ab; }
+  .chip.on { background: var(--hl); border-color: var(--hl); color: #fff; }
+  .chip .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .sep { width: 1px; height: 22px; background: var(--line); margin: 0 6px; }
+  #search { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; font: inherit; font-size: 13px; width: 190px; }
+  main { display: flex; height: calc(100% - 118px); min-height: 520px; }
+  #canvas { flex: 1; overflow: auto; position: relative; }
+  #canvas svg { display: block; }
+  aside { width: 400px; flex: none; border-left: 1px solid var(--line); background: var(--panel); overflow: auto; padding: 18px 20px 30px; }
+  aside h2 { font-size: 17px; margin: 0 0 2px; font-weight: 650; word-break: break-word; }
+  aside h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 20px 0 6px; font-weight: 600; }
+  aside p { margin: 6px 0; }
+  .kv { display: grid; grid-template-columns: 100px minmax(0, 1fr); overflow-wrap: anywhere; gap: 3px 10px; font-size: 13px; }
+  .kv div:nth-child(odd) { color: var(--muted); }
+  .cmd { display: flex; align-items: center; gap: 8px; background: #f3f1ec; border: 1px solid var(--line);
+    border-radius: 8px; padding: 7px 10px; margin: 6px 0; cursor: pointer; }
+  .cmd code { font: 12.5px/1.3 Consolas, "Cascadia Mono", Menlo, monospace; flex: 1; word-break: break-all; }
+  .cmd small { color: var(--muted); white-space: nowrap; font-size: 11.5px; }
+  .cmd:hover { border-color: var(--hl); }
+  .cmd.copied small { color: var(--pass); }
+  .big { font-size: 30px; font-weight: 650; line-height: 1.1; }
+  .bar { height: 10px; background: #eceae4; border-radius: 6px; overflow: hidden; margin: 6px 0 2px; }
+  .bar i { display: block; height: 100%; background: var(--hl); }
+  ul.list { list-style: none; padding: 0; margin: 4px 0; }
+  ul.list li { padding: 5px 0; border-bottom: 1px solid #f0eee9; font-size: 13px; display: flex; gap: 8px; align-items: flex-start; }
+  ul.list li:last-child { border-bottom: 0; }
+  ul.list .nm { flex: 1; word-break: break-word; }
+  ul.list .nm small { display: block; color: var(--muted); font-size: 11.5px; }
+  .pill { font-size: 11px; padding: 1px 7px; border-radius: 999px; color: #fff; white-space: nowrap; font-weight: 600; }
+  .s-pass, .s-success { background: var(--pass); } .s-warn { background: var(--warn); }
+  .s-error, .s-fail, .s-runtime { background: var(--error); } .s-skipped { background: var(--skip); } .s-none { background: var(--none); }
+  .link { color: var(--hl); cursor: pointer; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12.5px; margin-top: 14px; }
+  pre.sql { background: #f3f1ec; border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: 11.5px/1.45 Consolas, Menlo, monospace;
+    overflow: auto; max-height: 340px; white-space: pre; }
+  .hint { color: var(--muted); font-size: 13px; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  /* SVG */
+  .col-title { font-size: 14px; font-weight: 650; fill: var(--ink); }
+  .col-sub { font-size: 11.5px; fill: var(--muted); }
+  .grp { font-size: 10.5px; fill: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+  .node { cursor: pointer; }
+  .node rect.box { fill: #fff; stroke: #d3cfc6; stroke-width: 1; }
+  .node:hover rect.box { stroke: #8f8a80; }
+  .node text.nm { font-size: 12.5px; fill: var(--ink); dominant-baseline: central; }
+  .node text.badge { font-size: 10.5px; fill: #fff; font-weight: 700; dominant-baseline: central; text-anchor: middle; }
+  .node.sel rect.box { stroke: var(--hl); stroke-width: 2.5; }
+  .node.prob rect.box { stroke-width: 2; }
+  .node.prob.p-warn rect.box { stroke: var(--warn); }
+  .node.prob.p-error rect.box { stroke: var(--error); }
+  .dim .node.off { opacity: .16; }
+  .dim .edge.off { opacity: .05; }
+  .edge { fill: none; stroke: #b9b4a9; stroke-width: 1.2; }
+  .edge.on { stroke: var(--hl); stroke-width: 2; }
+  .hide-status .st { display: none; }
+  @media (max-width: 900px) { aside { width: 320px; } }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1 id="title"></h1>
+    <div class="sub" id="subtitle"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div class="stats" id="stats"></div>
+</header>
+<div class="toolbar" id="toolbar">
+  <span class="lbl">Rebuild one path</span>
+  <span id="systems"></span>
+  <span class="sep"></span>
+  <button class="chip" id="btnProblems"><span class="dot" style="background:var(--error)"></span>Warnings &amp; errors</button>
+  <button class="chip on" id="btnStatus">Test status</button>
+  <span class="sep"></span>
+  <input id="search" type="search" placeholder="Find a model…" autocomplete="off">
+  <button class="chip" id="btnClear" title="Esc">Clear</button>
+</div>
+<main>
+  <div id="canvas"></div>
+  <aside id="panel"></aside>
+</main>
+
+<script id="lineage-data" type="application/json">/*DATA*/</script>
+<script>
+(function () {
+  "use strict";
+  const DATA = JSON.parse(document.getElementById("lineage-data").textContent);
+  const NODES = DATA.nodes;
+  const byId = Object.fromEntries(NODES.map(n => [n.id, n]));
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const BUILDABLE = new Set(["model", "seed", "snapshot"]);
+
+  // ---------- helpers ----------
+  const el = (tag, attrs, parent) => {
+    const e = document.createElementNS(SVGNS, tag);
+    for (const k in attrs || {}) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const cls = s => "s-" + String(s || "none").split(" ")[0];
+  const rank = s => ({ error: 5, fail: 4, "runtime error": 4, warn: 3, skipped: 2, pass: 1, success: 1 }[s] || 0);
+  const fmtTime = iso => { if (!iso) return ""; const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString([], { dateStyle: "medium", timeStyle: "short" }); };
+  function walk(start, key) {
+    const seen = new Set(), stack = [...start];
+    while (stack.length) { const id = stack.pop(); if (seen.has(id)) continue; seen.add(id); (byId[id][key] || []).forEach(x => stack.push(x)); }
+    return seen;
+  }
+  const kindColor = n => n.kind === "source" ? "var(--bronze)" : n.kind === "seed" ? "var(--seed)"
+    : n.kind === "exposure" ? "var(--expo)" : (n.col === "dims" || n.col === "facts") ? "var(--gold)" : "var(--silver)";
+
+  // Worst status of a node's own run and its tests, used for badges and the problems view.
+  NODES.forEach(n => {
+    const all = n.tests.map(t => t.result && t.result.status).concat(n.unit_tests.map(t => t.result && t.result.status));
+    if (n.result) all.push(n.result.status);
+    if (n.fresh_result) all.push(n.fresh_result.status);
+    n.worst = all.reduce((w, s) => rank(s) > rank(w) ? s : w, null);
+    n.problem = rank(n.worst) >= 3 ? (rank(n.worst) >= 4 ? "error" : "warn") : null;
+  });
+
+  // ---------- header ----------
+  document.getElementById("title").textContent = DATA.title;
+  const lastRun = DATA.runs.length ? DATA.runs[DATA.runs.length - 1] : null;
+  document.getElementById("subtitle").textContent =
+    `dbt ${DATA.dbt_version || ""} · manifest ${fmtTime(DATA.manifest_at)}` +
+    (lastRun ? ` · results from ${DATA.runs.length} run${DATA.runs.length > 1 ? "s" : ""}, latest ${fmtTime(lastRun.at)} (${lastRun.command})` : " · no run results loaded");
+  document.getElementById("legend").innerHTML = [
+    ["var(--bronze)", "Bronze source"], ["var(--seed)", "Seed (reference CSV)"], ["var(--silver)", "Silver"],
+    ["var(--gold)", "Gold"], ["var(--expo)", "Semantic model"]
+  ].map(([c, t]) => `<span><i class="sw" style="background:${c}"></i>${t}</span>`).join("") +
+    `<span><i class="sw s-pass"></i>tests pass</span><span><i class="sw s-warn"></i>warning</span><span><i class="sw s-error"></i>error</span><span><i class="sw s-none"></i>not run</span>`;
+
+  const allTests = NODES.flatMap(n => n.tests.map(t => t)); // singular tests can appear on several nodes
+  const uniqTests = Object.values(Object.fromEntries(allTests.map(t => [t.id, t])));
+  const unitTests = NODES.flatMap(n => n.unit_tests);
+  const countBy = (arr, pred) => arr.filter(pred).length;
+  const models = NODES.filter(n => BUILDABLE.has(n.kind));
+  const stats = [
+    [NODES.filter(n => n.kind === "source").length, "sources"],
+    [models.length, "models, seeds, snapshot"],
+    [uniqTests.length, "data tests"],
+    [unitTests.length, "unit tests"],
+  ];
+  if (lastRun) {
+    stats.push([countBy(uniqTests, t => t.result && t.result.status === "warn"), "warnings", "var(--warn)"]);
+    stats.push([countBy(uniqTests, t => t.result && rank(t.result.status) >= 4), "errors", "var(--error)"]);
+  }
+  document.getElementById("stats").innerHTML = stats.map(([v, l, c]) =>
+    `<div class="stat"><b style="${c ? "color:" + c : ""}">${v}</b><span>${l}</span></div>`).join("");
+
+  // ---------- layout ----------
+  const NODE_W = 236, NODE_H = 28, GAP = 6, GRP_GAP = 26, COL_GAP = 92, TOP = 70, LEFT = 24;
+  const colKeys = DATA.columns.map(c => c.key);
+  const sysOrder = Object.keys(DATA.systems);
+  const groupOrder = g => { const i = sysOrder.indexOf(g); return i >= 0 ? i : (g === "seeds" ? 90 : 50); };
+  const cols = colKeys.map(k => NODES.filter(n => n.col === k));
+  const pos = {};
+  // Initial order: group, then name.
+  cols.forEach(c => c.sort((a, b) => groupOrder(a.group) - groupOrder(b.group) || a.group.localeCompare(b.group) || a.short.localeCompare(b.short)));
+  const place = () => cols.forEach(c => c.forEach((n, i) => pos[n.id] = i));
+  place();
+  // Barycenter sweeps inside each group so edges cross less; groups stay contiguous.
+  const bary = (n, key) => { const ns = n[key].filter(id => pos[id] != null); return ns.length ? ns.reduce((s, id) => s + pos[id], 0) / ns.length : pos[n.id]; };
+  for (let pass = 0; pass < 6; pass++) {
+    const fwd = pass % 2 === 0;
+    const order = fwd ? cols.map((c, i) => i).slice(1) : cols.map((c, i) => i).slice(0, -1).reverse();
+    order.forEach(ci => {
+      const key = fwd ? "parents" : "children";
+      const c = cols[ci];
+      const groups = [...new Set(c.map(n => n.group))];
+      const b = Object.fromEntries(c.map(n => [n.id, bary(n, key)]));
+      const out = [];
+      groups.forEach(g => out.push(...c.filter(n => n.group === g).sort((x, y) => b[x.id] - b[y.id])));
+      cols[ci] = out; place();
+    });
+  }
+  const showGroups = ci => ["bronze", "staging", "facts"].includes(colKeys[ci]);
+  const grpLabel = g => DATA.systems[g] ? DATA.systems[g].split(" (")[0] : g === "seeds" ? "Seeds (ref schema)" : g;
+  const xy = {}, groupHeads = [];
+  let maxY = 0;
+  cols.forEach((c, ci) => {
+    let y = TOP, prev = null;
+    c.forEach(n => {
+      if (showGroups(ci) && n.group !== prev) { if (prev !== null) y += GRP_GAP - GAP; groupHeads.push({ x: LEFT + ci * (NODE_W + COL_GAP), y: y + 12, t: grpLabel(n.group) }); y += 18; prev = n.group; }
+      xy[n.id] = { x: LEFT + ci * (NODE_W + COL_GAP), y };
+      y += NODE_H + GAP;
+    });
+    maxY = Math.max(maxY, y);
+  });
+  // Center short columns vertically against the tallest one.
+  cols.forEach((c, ci) => {
+    if (!c.length) return;
+    const last = xy[c[c.length - 1].id].y + NODE_H, h = last - TOP, off = Math.max(0, (maxY - TOP - h) / 2 - 10);
+    if (showGroups(ci)) return;
+    c.forEach(n => xy[n.id].y += off);
+  });
+  const W = LEFT * 2 + cols.length * NODE_W + (cols.length - 1) * COL_GAP, H = maxY + 20;
+
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img", "aria-label": "dbt lineage graph" });
+  document.getElementById("canvas").appendChild(svg);
+  const fit = () => { const box = document.getElementById("canvas"); const s = Math.min(1.15, Math.max(.55, (box.clientWidth - 8) / W)); svg.setAttribute("width", W * s); svg.setAttribute("height", H * s); };
+  window.addEventListener("resize", fit); fit();
+
+  DATA.columns.forEach((c, ci) => {
+    const x = LEFT + ci * (NODE_W + COL_GAP);
+    el("text", { x, y: 26, class: "col-title" }, svg).textContent = c.title;
+    el("text", { x, y: 44, class: "col-sub" }, svg).textContent = c.sub;
+  });
+  groupHeads.forEach(g => { el("text", { x: g.x + 2, y: g.y, class: "grp" }, svg).textContent = g.t; });
+
+  const gEdges = el("g", {}, svg), gNodes = el("g", {}, svg);
+  const edges = [];
+  NODES.forEach(n => n.parents.forEach(p => {
+    const a = xy[p], b = xy[n.id]; if (!a || !b) return;
+    const x1 = a.x + NODE_W, y1 = a.y + NODE_H / 2, x2 = b.x, y2 = b.y + NODE_H / 2, dx = Math.max(40, (x2 - x1) * .5);
+    // Same column (a gold fact built from another fact): loop out to the right instead of crossing back.
+    const d = a.x === b.x
+      ? `M${x1},${y1} C${x1 + 46},${y1} ${x1 + 46},${y2} ${x1},${y2}`
+      : `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
+    const path = el("path", { d, class: "edge" }, gEdges);
+    edges.push({ from: p, to: n.id, path });
+  }));
+
+  const nodeEls = {};
+  NODES.forEach(n => {
+    const { x, y } = xy[n.id];
+    const g = el("g", { class: "node" + (n.problem ? " prob p-" + n.problem : ""), transform: `translate(${x},${y})`, tabindex: 0 }, gNodes);
+    el("rect", { class: "box", width: NODE_W, height: NODE_H, rx: 6 }, g);
+    el("rect", { x: 0, y: 0, width: 5, height: NODE_H, rx: 2, fill: kindColor(n) }, g);
+    // Middle ellipsis keeps the distinguishing end of names like stg_dist__depletion_northland.
+    let label = n.short;
+    const maxChars = 30 - (n.tests.length ? 3 : 0) - (n.unit_tests.length ? 4 : 0) - (n.incremental ? 3 : 0);
+    if (label.length > maxChars) { const k = maxChars - 1, head = Math.ceil(k * .45); label = label.slice(0, head) + "…" + label.slice(label.length - (k - head)); }
+    el("text", { x: 13, y: NODE_H / 2, class: "nm" }, g).textContent = label;
+    const title = el("title", {}, g); title.textContent = `${n.name}\n${n.materialized}${n.incremental ? " (incremental)" : ""}\n${n.description}`;
+    // Badges, right to left: data tests (colored by worst result), unit tests, incremental, freshness.
+    let bx = NODE_W - 6;
+    const badge = (txt, fill, w) => { bx -= w; el("rect", { x: bx, y: 6, width: w, height: 16, rx: 8, fill, class: "st" }, g); el("text", { x: bx + w / 2, y: NODE_H / 2 + .5, class: "badge st" }, g).textContent = txt; bx -= 4; };
+    if (n.tests.length) {
+      const w = n.tests.reduce((m, t) => rank(t.result && t.result.status) > rank(m) ? t.result.status : m, null);
+      badge(String(n.tests.length), w ? `var(--${rank(w) >= 4 ? "error" : rank(w) === 3 ? "warn" : rank(w) === 2 ? "skip" : "pass"})` : "var(--none)", n.tests.length > 9 ? 24 : 20);
+    }
+    if (n.unit_tests.length) {
+      const w = n.unit_tests.reduce((m, t) => rank(t.result && t.result.status) > rank(m) ? t.result.status : m, null);
+      badge("U" + n.unit_tests.length, w ? (rank(w) >= 4 ? "var(--error)" : "var(--pass)") : "var(--none)", 26);
+    }
+    if (n.fresh_result) badge("⏱", `var(--${n.fresh_result.status === "pass" ? "pass" : n.fresh_result.status === "warn" ? "warn" : "error"})`, 20);
+    if (n.incremental) { bx -= 0; el("text", { x: bx - 2, y: NODE_H / 2, class: "nm", "text-anchor": "end", style: "font-size:11px;fill:var(--muted)" }, g).textContent = "inc"; }
+    g.addEventListener("click", e => { e.stopPropagation(); selectNode(n.id); });
+    g.addEventListener("keydown", e => { if (e.key === "Enter") selectNode(n.id); });
+    nodeEls[n.id] = g;
+  });
+
+  // ---------- highlighting ----------
+  function highlight(set, selected, noEdges) {
+    svg.classList.toggle("dim", !!set);
+    NODES.forEach(n => {
+      nodeEls[n.id].classList.toggle("off", !!set && !set.has(n.id));
+      nodeEls[n.id].classList.toggle("sel", !!selected && selected.has(n.id));
+    });
+    edges.forEach(e => {
+      const on = !!set && !noEdges && set.has(e.from) && set.has(e.to);
+      e.path.classList.toggle("on", on); e.path.classList.toggle("off", !!set && !on);
+      if (on) gEdges.appendChild(e.path);
+    });
+  }
+  const chips = {};
+  function setChip(key) { Object.entries(chips).forEach(([k, c]) => c.classList.toggle("on", k === key)); }
+
+  // ---------- panel ----------
+  const panel = document.getElementById("panel");
+  const cmdHtml = (cmd, note) => `<div class="cmd" data-cmd="${esc(cmd)}"><code>${esc(cmd)}</code><small>${esc(note || "copy")}</small></div>`;
+  panel.addEventListener("click", e => {
+    const c = e.target.closest(".cmd");
+    if (c) { navigator.clipboard && navigator.clipboard.writeText(c.dataset.cmd).catch(() => {}); c.classList.add("copied"); const s = c.querySelector("small"); const o = s.textContent; s.textContent = "copied"; setTimeout(() => { s.textContent = o; c.classList.remove("copied"); }, 1200); }
+    const l = e.target.closest("[data-node]"); if (l) selectNode(l.dataset.node);
+  });
+  const statusPill = r => `<span class="pill ${cls(r && r.status)}">${esc(r ? r.status : "not run")}</span>`;
+  const countBuild = set => [...set].filter(id => BUILDABLE.has(byId[id].kind)).length;
+  const testsIn = set => { const ids = new Set(); set.forEach(id => byId[id].tests.forEach(t => ids.add(t.id))); return ids.size; };
+
+  function overview() {
+    const gold = NODES.filter(n => n.col === "dims" || n.col === "facts").length;
+    panel.innerHTML = `
+      <h2>How to read this</h2>
+      <p class="hint">Each box is something dbt knows about: a raw table in bronze, a reference CSV (seed), a silver view, a gold table, or the semantic model the report reads. Lines show what each one is built from. dbt works the order out from the <code>ref()</code> and <code>source()</code> calls in the SQL.</p>
+      <h3>Try</h3>
+      <ul class="list">
+        <li><span class="nm"><b>Pick a source system</b> above, such as Distributor depletion reports. Only the path it feeds lights up, and the command rebuilds just that path.</span></li>
+        <li><span class="nm"><b>Click any box</b> to see what it is built from and what depends on it, with its tests and the dbt command to rebuild it.</span></li>
+        <li><span class="nm"><b>Warnings &amp; errors</b> shows where the latest run's tests flagged problems.</span></li>
+      </ul>
+      <h3>This project</h3>
+      <div class="kv">
+        <div>Sources</div><div>${NODES.filter(n => n.kind === "source").length} raw tables from ${sysOrder.length} systems</div>
+        <div>Silver</div><div>${NODES.filter(n => n.col === "staging").length} staging views, ${NODES.filter(n => n.col === "intermediate").length} intermediate models and snapshot</div>
+        <div>Gold</div><div>${gold} tables with enforced contracts</div>
+        <div>Tests</div><div>${uniqTests.length} data tests, ${unitTests.length} unit tests</div>
+      </div>
+      ${DATA.runs.length ? `<h3>Results loaded</h3><ul class="list">${DATA.runs.slice().reverse().map(r => `<li><span class="nm"><code>${esc(r.command)}</code><small>${fmtTime(r.at)} · ${r.results} results</small></span></li>`).join("")}</ul>` : ""}`;
+  }
+
+  function selectNode(id) {
+    const n = byId[id]; setChip(null);
+    const up = walk([id], "parents"), down = walk([id], "children");
+    const set = new Set([...up, ...down]);
+    highlight(set, new Set([id]));
+    const downBuild = countBuild(down), total = models.length;
+    const sel = n.select;
+    let cmds = "";
+    if (BUILDABLE.has(n.kind) || n.kind === "source") {
+      if (BUILDABLE.has(n.kind)) cmds += cmdHtml(`dbt build -s ${sel}`, "just this, with its tests");
+      cmds += cmdHtml(`dbt build -s ${sel}+`, `${downBuild} of ${total} rebuilt`);
+      if (n.kind !== "source" && n.kind !== "seed") cmds += cmdHtml(`dbt build -s +${sel}`, `${countBuild(up)} of ${total} rebuilt`);
+      if (n.tests.length) cmds += cmdHtml(`dbt test -s ${sel}`, "tests only");
+    } else if (n.kind === "exposure") {
+      cmds += cmdHtml(`dbt build -s +${sel}`, `${countBuild(up)} of ${total} rebuilt`);
+    }
+    const tests = n.tests.slice().sort((a, b) => rank(b.result && b.result.status) - rank(a.result && a.result.status) || a.name.localeCompare(b.name));
+    const kindLabel = { source: "Bronze source", seed: "Seed", model: "Model", snapshot: "Snapshot", exposure: "Exposure" }[n.kind];
+    const fresh = n.freshness && (n.freshness.warn_after || {}).count ? `warn after ${n.freshness.warn_after.count} ${n.freshness.warn_after.period}s, error after ${(n.freshness.error_after || {}).count} ${(n.freshness.error_after || {}).period}s` : "";
+    const nodeLink = pid => `<li><span class="nm link" data-node="${esc(pid)}">${esc(byId[pid].name)}</span></li>`;
+    panel.innerHTML = `
+      <div class="hint">${esc(kindLabel)} · ${esc(n.col === "bronze" ? "bronze" : n.col === "dims" || n.col === "facts" ? "gold" : n.col === "exposure" ? "report layer" : "silver")}</div>
+      <h2>${esc(n.name)}</h2>
+      ${n.description ? `<p>${esc(n.description)}</p>` : ""}
+      <div class="kv" style="margin-top:10px">
+        <div>Built as</div><div>${esc(n.materialized)}${n.incremental ? ` (${esc(n.strategy || "incremental")})` : ""}${n.contract ? " · contract enforced" : ""}</div>
+        ${n.relation ? `<div>Object</div><div><code>${esc(n.relation.replace(/"/g, ""))}</code></div>` : ""}
+        ${n.path ? `<div>File</div><div><code>${esc(n.path.replace(/\\/g, "/"))}</code>${n.lines ? ` · ${n.lines} lines` : ""}</div>` : ""}
+        ${n.columns ? `<div>Columns</div><div>${n.columns} documented</div>` : ""}
+        ${fresh ? `<div>Freshness</div><div>${esc(fresh)}</div>` : ""}
+        ${n.fresh_result ? `<div>Last check</div><div>${statusPill(n.fresh_result)} ${n.fresh_result.age_hours != null ? esc(n.fresh_result.age_hours + " h old") : ""}</div>` : ""}
+        ${n.result ? `<div>Last run</div><div>${statusPill(n.result)} ${esc(fmtTime(n.result.at))}</div>` : ""}
+        <div>Upstream</div><div>${up.size - 1} nodes</div>
+        <div>Downstream</div><div>${down.size - 1} nodes</div>
+      </div>
+      ${cmds ? `<h3>Rebuild</h3>${cmds}` : ""}
+      ${tests.length ? `<h3>Data tests (${tests.length})</h3><ul class="list">${tests.map(t => `<li>${statusPill(t.result)}<span class="nm">${esc(t.type === "singular" ? t.name : t.type)}${t.column ? ` on <code>${esc(t.column)}</code>` : ""}${t.severity === "warn" ? " · warn only" : ""}${t.description ? `<small>${esc(t.description)}</small>` : ""}${t.result && rank(t.result.status) >= 3 && t.result.message ? `<small>${esc(t.result.message)}</small>` : ""}</span></li>`).join("")}</ul>` : ""}
+      ${n.unit_tests.length ? `<h3>Unit tests (${n.unit_tests.length})</h3><ul class="list">${n.unit_tests.map(t => `<li>${statusPill(t.result)}<span class="nm">${esc(t.name.replace(n.short + "_", "").replace(/_/g, " "))}${t.description ? `<small>${esc(t.description)}</small>` : ""}</span></li>`).join("")}</ul>` : ""}
+      ${n.parents.length ? `<h3>Built from</h3><ul class="list">${n.parents.map(nodeLink).join("")}</ul>` : ""}
+      ${n.children.length ? `<h3>Feeds</h3><ul class="list">${n.children.map(nodeLink).join("")}</ul>` : ""}
+      ${n.sql ? `<details><summary>Show SQL</summary><pre class="sql">${esc(n.sql)}</pre></details>` : ""}`;
+    panel.scrollTop = 0;
+  }
+
+  function selectSystem(sys) {
+    setChip(sys);
+    const srcs = NODES.filter(n => n.kind === "source" && n.system === sys).map(n => n.id);
+    const down = walk(srcs, "children");
+    highlight(down, new Set(srcs));
+    const rebuilt = [...down].filter(id => BUILDABLE.has(byId[id].kind));
+    const untouchedGold = NODES.filter(n => (n.col === "dims" || n.col === "facts") && !down.has(n.id));
+    const pct = Math.round(100 * rebuilt.length / models.length);
+    panel.innerHTML = `
+      <div class="hint">Rebuild one path</div>
+      <h2>${esc(DATA.systems[sys])}</h2>
+      <p>New files from this system land in ${srcs.length} bronze table${srcs.length > 1 ? "s" : ""}. dbt rebuilds only what reads from them, in dependency order, and runs those models' tests.</p>
+      ${cmdHtml(`dbt build -s source:${sys}+`)}
+      <div style="margin-top:14px"><span class="big">${rebuilt.length}</span> <span class="hint">of ${models.length} models rebuilt</span></div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="hint">${testsIn(down)} data tests run · ${models.length - rebuilt.length} models keep their current data</div>
+      <h3>Rebuilt (${rebuilt.length})</h3>
+      <ul class="list">${rebuilt.sort((a, b) => colKeys.indexOf(byId[a].col) - colKeys.indexOf(byId[b].col)).map(id => `<li><span class="nm link" data-node="${esc(id)}">${esc(byId[id].name)}</span><small class="hint">${esc(byId[id].materialized)}</small></li>`).join("")}</ul>
+      <h3>Gold tables not touched (${untouchedGold.length})</h3>
+      <ul class="list">${untouchedGold.map(n => `<li><span class="nm link" data-node="${esc(n.id)}">${esc(n.name)}</span></li>`).join("") || `<li class="hint">None: every gold table reads from this system.</li>`}</ul>`;
+    panel.scrollTop = 0;
+  }
+
+  function showProblems() {
+    setChip("__problems");
+    const probs = NODES.filter(n => n.problem);
+    highlight(new Set(probs.map(n => n.id)), null, true);
+    const items = [];
+    const seen = new Set();
+    NODES.forEach(n => {
+      n.tests.forEach(t => { if (t.result && rank(t.result.status) >= 3 && !seen.has(t.id)) { seen.add(t.id); items.push({ n, t }); } });
+      n.unit_tests.forEach(t => { if (t.result && rank(t.result.status) >= 4) items.push({ n, t: Object.assign({ type: "unit test" }, t) }); });
+      if (n.result && rank(n.result.status) >= 4) items.push({ n, t: { type: n.kind + " build", name: n.name, result: n.result } });
+      if (n.fresh_result && rank(n.fresh_result.status) >= 3) items.push({ n, t: { type: "source freshness", name: n.short, result: Object.assign({ message: n.fresh_result.age_hours != null ? `${n.fresh_result.age_hours} hours since the last load` : "" }, n.fresh_result) } });
+    });
+    items.sort((a, b) => rank(b.t.result.status) - rank(a.t.result.status));
+    const errs = items.filter(i => rank(i.t.result.status) >= 4).length, warns = items.length - errs;
+    panel.innerHTML = `
+      <div class="hint">Latest results</div>
+      <h2>Warnings &amp; errors</h2>
+      ${DATA.runs.length ? "" : `<p class="hint">No run results were loaded. Run <code>.\\tasks.ps1 build</code>, then <code>.\\tasks.ps1 lineage</code>.</p>`}
+      <p><b style="color:var(--error)">${errs} error${errs === 1 ? "" : "s"}</b> stop the run's downstream models; <b style="color:var(--warn)">${warns} warning${warns === 1 ? "" : "s"}</b> are logged and the run carries on. Every result is also written to <code>audit.dbt_run_log</code>.</p>
+      <ul class="list">${items.map(({ n, t }) => `<li>${statusPill(t.result)}<span class="nm"><span class="link" data-node="${esc(n.id)}">${esc(n.name)}</span> · ${esc(t.type === "singular" ? t.name : t.type)}${t.column ? ` on <code>${esc(t.column)}</code>` : ""}${t.result.failures ? ` · ${t.result.failures} row${t.result.failures === 1 ? "" : "s"}` : ""}<small>${esc(t.result.message || t.name)}</small></span></li>`).join("") || `<li class="hint">Nothing flagged in the loaded results.</li>`}</ul>`;
+    panel.scrollTop = 0;
+  }
+
+  function clearAll() { setChip(null); highlight(null, null); overview(); document.getElementById("search").value = ""; }
+
+  // ---------- toolbar ----------
+  const sysBox = document.getElementById("systems");
+  sysOrder.forEach(k => {
+    if (!NODES.some(n => n.system === k)) return;
+    const b = document.createElement("button"); b.className = "chip";
+    b.innerHTML = `<span class="dot" style="background:var(--bronze)"></span>${esc(DATA.systems[k].split(" (")[0])}`;
+    b.addEventListener("click", () => chips[k].classList.contains("on") ? clearAll() : selectSystem(k));
+    sysBox.appendChild(b); sysBox.appendChild(document.createTextNode(" ")); chips[k] = b;
+  });
+  chips.__problems = document.getElementById("btnProblems");
+  chips.__problems.addEventListener("click", () => chips.__problems.classList.contains("on") ? clearAll() : showProblems());
+  const btnStatus = document.getElementById("btnStatus");
+  btnStatus.addEventListener("click", () => { btnStatus.classList.toggle("on"); svg.classList.toggle("hide-status", !btnStatus.classList.contains("on")); });
+  document.getElementById("btnClear").addEventListener("click", clearAll);
+  document.getElementById("canvas").addEventListener("click", e => { if (e.target === svg || e.target.id === "canvas") clearAll(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") clearAll(); });
+  document.getElementById("search").addEventListener("input", e => {
+    const q = e.target.value.trim().toLowerCase();
+    if (!q) { clearAll(); return; }
+    const hits = NODES.filter(n => n.name.toLowerCase().includes(q) || n.short.toLowerCase().includes(q));
+    if (hits.length === 1) { selectNode(hits[0].id); return; }
+    setChip(null); highlight(new Set(hits.map(n => n.id)), new Set(hits.map(n => n.id)));
+  });
+  document.getElementById("search").addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    const q = e.target.value.trim().toLowerCase();
+    const hit = NODES.find(n => n.short.toLowerCase() === q) || NODES.find(n => n.name.toLowerCase().includes(q));
+    if (hit) selectNode(hit.id);
+  });
+
+  // Deep links for the presentation: #system=dist, #node=fct_depletion, #problems
+  function fromHash() {
+    const h = decodeURIComponent(location.hash.slice(1));
+    if (h.startsWith("system=") && chips[h.slice(7)]) return selectSystem(h.slice(7));
+    if (h.startsWith("node=")) { const n = NODES.find(x => x.short === h.slice(5) || x.id === h.slice(5)); if (n) return selectNode(n.id); }
+    if (h === "problems") return showProblems();
+    overview();
+  }
+  window.addEventListener("hashchange", fromHash);
+  fromHash();
+})();
+</script>
+</body>
+</html>

@@ -60,6 +60,9 @@ function Invoke-Dbt {
     try {
         Write-Host "dbt $($DbtArgs -join ' ')" -ForegroundColor Cyan
         & $VenvDbt @DbtArgs
+        $dbtExit = $LASTEXITCODE
+        Save-RunResults
+        $global:LASTEXITCODE = $dbtExit
         if ($LASTEXITCODE -ne 0 -and $AllowTestFailures -and (Test-Path 'target\run_results.json')) {
             $results = (Get-Content 'target\run_results.json' -Raw | ConvertFrom-Json).results
             $errors = @($results | Where-Object { $_.status -eq 'error' })
@@ -73,6 +76,19 @@ function Invoke-Dbt {
     } finally {
         Pop-Location
     }
+}
+
+function Save-RunResults {
+    # Each dbt command overwrites target\run_results.json (build, then the unit tests, for example).
+    # Keep a copy per command so the lineage page can show the latest status of every node.
+    # Runs inside dbt\. Keeps the newest 30.
+    if (-not (Test-Path 'target\run_results.json')) { return }
+    $hist = 'target\run_history'
+    New-Item -ItemType Directory -Force $hist | Out-Null
+    $rr = Get-Item 'target\run_results.json'
+    $name = '{0}_{1}.json' -f $rr.LastWriteTime.ToString('yyyyMMdd-HHmmss'), $DbtArgs[0]
+    Copy-Item $rr.FullName (Join-Path $hist $name) -Force
+    Get-ChildItem $hist -Filter *.json | Sort-Object Name -Descending | Select-Object -Skip 30 | Remove-Item
 }
 
 function Invoke-Script {
@@ -114,6 +130,8 @@ try {
     unit           dbt test -s test_type:unit
     freshness      dbt source freshness
     docs           dbt docs generate, then serve
+    lineage        Build docs\lineage\dbt_lineage.html from the manifest and latest results, and open it
+                   (dbt parse first if there is no manifest)
 
   Fabric
     setup          Create workspace, lakehouse, warehouse, schemas; writes FABRIC_SQL_ENDPOINT
@@ -173,7 +191,7 @@ try {
                 # --empty creates a missing incremental table with no rows when its parents exist
                 # (e.g. after dropping it); existing tables are left unchanged (docs/SPIKE.md item 8).
                 Invoke-Dbt @('run', '-s', 'config.materialized:incremental', '--empty')
-                Invoke-Dbt @('build', '--selector', 'nightly')
+                Invoke-Dbt @('build', '--selector', 'nightly') -AllowTestFailures
             }
         }
         'unit'      { Invoke-Dbt @('test', '-s', 'test_type:unit') }
@@ -181,6 +199,12 @@ try {
         'docs' {
             Invoke-Dbt @('docs', 'generate')
             Invoke-Dbt @('docs', 'serve')
+        }
+        'lineage' {
+            if (-not (Test-Path 'dbt\target\manifest.json')) { Invoke-Dbt @('parse') }
+            Invoke-Script 'build_lineage.py' @()
+            $page = Join-Path $RepoRoot 'docs\lineage\dbt_lineage.html'
+            if (-not $Yes) { Start-Process $page }   # -Yes = build only, don't open
         }
         'lint' {
             . (Join-Path $RepoRoot 'scripts\load_env.ps1')
