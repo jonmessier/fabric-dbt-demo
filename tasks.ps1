@@ -29,6 +29,8 @@ param(
     [switch]$ReloadAll,
     [switch]$SkipUpload,
     [switch]$Run,
+    [switch]$FirstBuild,
+    [switch]$Yes,
     [switch]$WriteSeeds,
     [switch]$Force
 )
@@ -49,13 +51,24 @@ function Assert-LastExit {
 }
 
 function Invoke-Dbt {
-    param([string[]]$DbtArgs)
+    # -AllowTestFailures: failing data tests are not an error (the planted "act 1" defects), but a model,
+    # seed or snapshot that errors still is. Decided from target\run_results.json.
+    param([string[]]$DbtArgs, [switch]$AllowTestFailures)
     if (-not (Test-Path $VenvDbt)) { throw "dbt not found in .venv. Run: .\tasks.ps1 venv" }
     . (Join-Path $RepoRoot 'scripts\load_env.ps1')
     Push-Location (Join-Path $RepoRoot 'dbt')
     try {
         Write-Host "dbt $($DbtArgs -join ' ')" -ForegroundColor Cyan
         & $VenvDbt @DbtArgs
+        if ($LASTEXITCODE -ne 0 -and $AllowTestFailures -and (Test-Path 'target\run_results.json')) {
+            $results = (Get-Content 'target\run_results.json' -Raw | ConvertFrom-Json).results
+            $errors = @($results | Where-Object { $_.status -eq 'error' })
+            $fails = @($results | Where-Object { $_.status -eq 'fail' })
+            if ($errors.Count -eq 0) {
+                Write-Host "dbt $($DbtArgs[0]) finished with $($fails.Count) failing test(s): expected in act 1 (planted defects)." -ForegroundColor Yellow
+                $global:LASTEXITCODE = 0
+            }
+        }
         Assert-LastExit "dbt $($DbtArgs[0])"
     } finally {
         Pop-Location
@@ -97,6 +110,7 @@ try {
     debug          dbt debug
     seed           dbt seed
     build          dbt build --selector nightly
+                   (-FirstBuild = into an empty warehouse: unit tests after the models)
     unit           dbt test -s test_type:unit
     freshness      dbt source freshness
     docs           dbt docs generate, then serve
@@ -108,10 +122,12 @@ try {
                    (-ReloadAll = rebuild every bronze table, -SkipUpload = notebook only)
     dbt-job        Publish dbt\ as the Fabric dbt job dbt_lpb (dbt build, all nodes)
                    (-Run = also run it in Fabric and print its dbt version and results)
+    pipeline       Deploy nb_ingest_bronze, nb_dbt_freshness and pl_daily_load
+                   (-Run = upload new landing files, run the pipeline, print each activity)
+    reset          Put the demo back to its starting state ("act 1"); needs -Yes
 
   Fabric (not built yet)
     identity       App registration, GitHub OIDC, tenant checks  (Phase 3)
-    reset          Put the demo back to its starting state       (Phase 5)
     deploy         Publish to test/prod with fabric-cicd         (Phase 7)
     teardown       Delete a workspace                            (Phase 7)
 
@@ -147,11 +163,17 @@ try {
         'debug'     { Invoke-Dbt @('debug') }
         'seed'      { Invoke-Dbt @('seed') }
         'build' {
-            # A unit test that overrides is_incremental needs its model's table to exist, so a new
-            # environment's first build would fail. --empty creates missing incremental tables with
-            # no rows and leaves existing ones unchanged (docs/SPIKE.md item 8).
-            Invoke-Dbt @('run', '-s', 'config.materialized:incremental', '--empty')
-            Invoke-Dbt @('build', '--selector', 'nightly')
+            if ($FirstBuild) {
+                # Empty warehouse (new environment, or after reset): the fct_sales_line unit test reads
+                # {{ this }}, which doesn't exist yet. Build everything without unit tests, then run them.
+                Invoke-Dbt @('build', '--selector', 'nightly', '--exclude', 'test_type:unit') -AllowTestFailures
+                Invoke-Dbt @('test', '-s', 'test_type:unit')
+            } else {
+                # --empty creates a missing incremental table with no rows when its parents exist
+                # (e.g. after dropping it); existing tables are left unchanged (docs/SPIKE.md item 8).
+                Invoke-Dbt @('run', '-s', 'config.materialized:incremental', '--empty')
+                Invoke-Dbt @('build', '--selector', 'nightly')
+            }
         }
         'unit'      { Invoke-Dbt @('test', '-s', 'test_type:unit') }
         'freshness' { Invoke-Dbt @('source', 'freshness') }
@@ -176,12 +198,45 @@ try {
             if ($SkipUpload) { $a += '--skip-upload' }
             Invoke-Script 'load_bronze.py' $a
         }
+        'pipeline' {
+            $a = @('--env', $Environment)
+            if ($Run) { $a += '--run' }
+            if ($SkipUpload) { $a += '--skip-upload' }
+            Invoke-Script 'pipeline.py' $a
+        }
         'dbt-job' {
             $a = @('--env', $Environment)
             if ($Run) { $a += '--run' }
             Invoke-Script 'dbt_job.py' $a
         }
-        'reset'    { Write-NotYet 'Phase 5' 'scripts\reset_demo.py' }
+        'reset' {
+            if (-not $Yes) {
+                Write-Host @"
+reset puts $Environment back to the demo's starting state ("act 1"). It
+  1. regenerates data\landing (backfill only, with the planted defects),
+  2. replaces lh_bronze Files/landing and reloads every bronze table (scripts\reset_demo.py),
+  3. drops every table and view in ref, silver, snapshots, gold and audit,
+  4. rebuilds with dbt, unit tests last (dev only).
+Run again with -Yes to do it.
+"@ -ForegroundColor Yellow
+                exit 1
+            }
+            if ($Environment -eq 'prod') { throw 'reset refuses prod. Run scripts\reset_demo.py --allow-prod deliberately.' }
+            $dirty = git status --porcelain -- dbt
+            if ($dirty) {
+                Write-Host 'Note: dbt\ has uncommitted changes (demo edits?). Restore them with git restore <file>:' -ForegroundColor Yellow
+                $dirty | ForEach-Object { Write-Host "  $_" }
+            }
+            & (Get-Python) 'scripts\generate_data.py' 'backfill' '--force'
+            Assert-LastExit 'generate_data backfill'
+            Invoke-Script 'reset_demo.py' @('--env', $Environment, '--confirm')
+            if ($Environment -eq 'dev') {
+                Invoke-Dbt @('build', '--selector', 'nightly', '--exclude', 'test_type:unit') -AllowTestFailures
+                Invoke-Dbt @('test', '-s', 'test_type:unit')
+            } else {
+                Write-Host "Local dbt targets dev only. Rebuild $Environment with its pipeline or dbt job." -ForegroundColor Yellow
+            }
+        }
         'deploy'   { Write-NotYet 'Phase 7' 'scripts\deploy.py' }
         'teardown' { Write-NotYet 'Phase 7' 'scripts\teardown.py' }
         default {

@@ -245,6 +245,15 @@ class OneLake:
         if resp.status_code != 200:
             raise FabricError(f"OneLake flush {path} -> {resp.status_code}: {resp.text[:400]}")
 
+    def delete(self, path: str) -> bool:
+        """Delete a file or folder (recursively). False if it didn't exist."""
+        resp = self._call("DELETE", f"{ONELAKE_DFS}/{self.ws}/{path}", params={"recursive": "true"})
+        if resp.status_code == 404:
+            return False
+        if resp.status_code != 200:
+            raise FabricError(f"OneLake delete {path} -> {resp.status_code}: {resp.text[:400]}")
+        return True
+
     def read(self, path: str) -> bytes | None:
         resp = self._call("GET", f"{ONELAKE_DFS}/{self.ws}/{path}")
         if resp.status_code == 404:
