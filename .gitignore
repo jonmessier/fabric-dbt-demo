@@ -31,3 +31,6 @@ docs/lineage/dbt_lineage.html
 
 # dbt job import zip (built by hand, see docs/SPIKE.md)
 *.zip
+
+# Office lock files (exist while a document is open)
+~$*
