@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+  - name: dist
+    description: >
+      Monthly depletion (sell-through) reports from the three distributors, each in its own layout
+      with its own product and account codes. Column names are the file headers in lower snake_case.
+    database: "{{ env_var('FABRIC_LAKEHOUSE', 'lh_bronze') }}"
+    schema: dbo
+    loaded_at_field: _ingested_at
+    freshness:
+      # monthly files: this only says "nothing has been loaded for over a month".
+      # A specific distributor being a month behind is caught by
+      # tests/singular/assert_distributor_reports_not_late.sql
+      warn_after: {count: 35, period: day}
+      error_after: {count: 45, period: day}
+    tables:
+      - name: dist_depletion_northland
+        description: Northland Beverage Partners (MN). CSV with separate Cases and Kegs columns.
+      - name: dist_depletion_badger
+        description: Badger Ridge Distributing (WI). CSV with quantity and unit of measure, US date format.
+      - name: dist_depletion_hawkeye
+        description: Hawkeye Prairie Wholesale (IA). Pipe-delimited text.

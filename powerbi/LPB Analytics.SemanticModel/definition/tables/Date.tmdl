@@ -1,0 +1,129 @@
+/// One row per calendar day with calendar and 4-4-5 fiscal attributes.
+table Date
+	dataCategory: Time
+	lineageTag: 2dfef82e-bd83-5dc6-b41a-a45d1ff32e9f
+
+	/// Date as yyyymmdd; joins to dim_date.
+	column 'Date Key'
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: a32f6af5-278d-50ac-a25e-9976b501e1bf
+		summarizeBy: none
+		sourceColumn: date_key
+
+	/// The date.
+	column 'Calendar Date'
+		dataType: dateTime
+		isKey
+		formatString: Short Date
+		lineageTag: c4033e75-cbf3-5cde-a909-c9608e90e13f
+		summarizeBy: none
+		sourceColumn: calendar_date
+
+	column 'Calendar Year'
+		dataType: int64
+		formatString: 0
+		lineageTag: 01203e7b-885d-5bb5-b28b-6dd96182160e
+		summarizeBy: none
+		sourceColumn: calendar_year
+
+	column 'Calendar Quarter'
+		dataType: int64
+		formatString: 0
+		lineageTag: 3be6ff89-878b-5822-9140-579962d632bb
+		summarizeBy: none
+		sourceColumn: calendar_quarter
+
+	column 'Calendar Month'
+		dataType: int64
+		formatString: 0
+		lineageTag: 74270556-d2f4-5e62-aa30-e598c79122e6
+		summarizeBy: none
+		sourceColumn: calendar_month
+
+	column 'Month Name'
+		dataType: string
+		lineageTag: eba74bfb-aa11-568a-8ecb-f48b788c9cc5
+		summarizeBy: none
+		sourceColumn: month_name
+		sortByColumn: 'Calendar Month'
+
+	column 'Month Start Date'
+		dataType: dateTime
+		formatString: mmm yyyy
+		lineageTag: 572e0b4d-45ea-50f3-940f-d01390976c96
+		summarizeBy: none
+		sourceColumn: month_start_date
+
+	/// 1 = Monday ... 7 = Sunday.
+	column 'Day Of Week'
+		dataType: int64
+		formatString: 0
+		lineageTag: 95e96684-607f-5227-bbf3-db7c4ea0c2a3
+		summarizeBy: none
+		sourceColumn: day_of_week
+
+	column 'Day Name'
+		dataType: string
+		lineageTag: 0152ad0c-c31a-5baf-9729-e87090fee75b
+		summarizeBy: none
+		sourceColumn: day_name
+		sortByColumn: 'Day Of Week'
+
+	/// Saturday or Sunday.
+	column 'Is Weekend'
+		dataType: boolean
+		lineageTag: c815a8a3-1750-5173-8ab8-c49a1edaa716
+		summarizeBy: none
+		sourceColumn: is_weekend
+
+	column 'Fiscal Year'
+		dataType: int64
+		formatString: 0
+		lineageTag: e35228db-79d2-5864-90f1-011e9c3cabb4
+		summarizeBy: none
+		sourceColumn: fiscal_year
+
+	column 'Fiscal Quarter'
+		dataType: int64
+		formatString: 0
+		lineageTag: 17793b0e-55bc-5ab0-9b95-0769f1cd4ff1
+		summarizeBy: none
+		sourceColumn: fiscal_quarter
+
+	column 'Fiscal Period'
+		dataType: int64
+		formatString: 0
+		lineageTag: 3c76f691-b1cb-5e38-98d4-15efbb6c8273
+		summarizeBy: none
+		sourceColumn: fiscal_period
+
+	/// For example FY2026-P10.
+	column 'Fiscal Period Name'
+		dataType: string
+		lineageTag: 1bb8f635-e4a1-549e-8e22-0fcb72a50d92
+		summarizeBy: none
+		sourceColumn: fiscal_period_name
+
+	column 'Fiscal Period Start Date'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: e819703d-955a-51fc-b8eb-45b524f30e35
+		summarizeBy: none
+		sourceColumn: fiscal_period_start_date
+
+	column 'Fiscal Period End Date'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: e9600d8c-8769-538c-9478-081f4e1ed38d
+		summarizeBy: none
+		sourceColumn: fiscal_period_end_date
+
+	partition Date = entity
+		mode: directLake
+		source
+			entityName: dim_date
+			schemaName: gold
+			expressionSource: 'DirectLake - wh_analytics'
+

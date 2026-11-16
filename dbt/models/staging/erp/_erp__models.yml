@@ -1,0 +1,182 @@
+version: 2
+
+models:
+  - name: stg_erp__customer
+    description: Current version of each ERP customer, typed and trimmed. One row per customer.
+    columns:
+      - name: customer_no
+        data_tests: [unique, not_null]
+      - name: customer_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [DISTRIBUTOR, RETAIL, ON_PREMISE, EVENT]
+      - name: state_raw
+        description: State exactly as typed in the ERP.
+      - name: state_text
+        description: State upper-cased and trimmed, ready to look up in ref_state_region.
+        data_tests:
+          - relationships:
+              description: >
+                Checks that every customer's state, as typed in the ERP, matches a state in
+                ref_state_region; a failure means a new spelling or a bad entry left a customer without
+                a state and sales region, so their sales drop out of the regional reports.
+              arguments:
+                to: ref('ref_state_region')
+                field: state_text
+              config:
+                severity: warn   # a new spelling needs a row in the seed; it should not stop the build
+
+  - name: stg_erp__item
+    description: Current version of each ERP item (SKU). One row per item.
+    columns:
+      - name: item_no
+        data_tests: [unique, not_null]
+      - name: package_code
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('ref_uom_conversion')
+                field: package_code
+      - name: standard_cost
+        data_tests: [non_negative]
+
+  - name: stg_erp__price_list
+    description: List prices per item and price tier with their effective dates. One row per item, tier and starting date.
+    data_tests:
+      - unique:
+          column_name: "concat(item_no, '|', price_tier, '|', cast(starting_date as varchar(10)))"
+    columns:
+      - name: item_no
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_erp__item')
+                field: item_no
+      - name: list_price
+        data_tests: [not_null, non_negative]
+      - name: ending_date
+        description: Last day the price applied; null while it is the current price.
+
+  - name: stg_erp__sales_header
+    description: Latest version of each sales order header. One row per order.
+    columns:
+      - name: order_no
+        data_tests: [unique, not_null]
+      - name: customer_no
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_erp__customer')
+                field: customer_no
+      - name: order_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [OPEN, INVOICED, CANCELLED]
+
+  - name: stg_erp__sales_line
+    description: Sales order lines. One row per order and line number.
+    data_tests:
+      - unique:
+          column_name: "concat(order_no, '|', cast(order_line_no as varchar(12)))"
+    columns:
+      - name: order_no
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_erp__sales_header')
+                field: order_no
+      - name: quantity
+        data_tests: [not_null, non_negative]
+      - name: unit_price
+        data_tests: [non_negative]
+
+  - name: stg_erp__shipment
+    description: Posted shipments. One row per shipment.
+    columns:
+      - name: shipment_no
+        data_tests: [unique, not_null]
+
+  - name: stg_erp__invoice_line
+    description: >
+      Posted invoice and credit memo lines. One row per document and line. Returns are credit memo
+      lines with a negative quantity and amount; they are valid and must flow through to revenue.
+    data_tests:
+      - unique:
+          column_name: "concat(invoice_no, '|', cast(invoice_line_no as varchar(12)))"
+    columns:
+      - name: invoice_no
+        data_tests: [not_null]
+      - name: document_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [INVOICE, CREDIT]
+      - name: item_no
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_erp__item')
+                field: item_no
+      - name: shipment_no
+        description: Shipment the invoice bills for. Null on credit memos.
+        data_tests:
+          - relationships:
+              description: >
+                Checks that every invoice line that names a shipment points to a shipment the ERP
+                recorded; a failure means we billed for shipments with no shipment record, which finance
+                should review before trusting shipped-versus-billed numbers.
+              arguments:
+                to: ref('stg_erp__shipment')
+                field: shipment_no
+              config:
+                severity: warn   # billing without a shipment record is for finance to review, not a reason to stop
+      - name: unit_price
+        data_tests: [non_negative]
+
+unit_tests:
+  - name: stg_erp__customer_keeps_latest_version_and_normalizes_state
+    description: >
+      A customer that changed in the ERP appears twice in bronze. Only the newest version survives,
+      and free-text state values are upper-cased and trimmed for the seed lookup.
+    model: stg_erp__customer
+    given:
+      - input: source('erp', 'erp_customer')
+        rows:
+          - {customer_no: C-1, customer_name: Old Mill Tavern, state: " mn ", price_tier: C, updated_at: "2026-01-01 10:00:00", _ingested_at: "2026-10-31 02:00:00"}
+          - {customer_no: C-1, customer_name: Old Mill Tavern, state: "Minn.", price_tier: B, updated_at: "2026-11-01 08:15:00", _ingested_at: "2026-11-02 02:00:00"}
+          - {customer_no: C-2, customer_name: Lakeside Liquor, state: "Minnesota", price_tier: C, updated_at: "2026-01-01 10:00:00", _ingested_at: "2026-10-31 02:00:00"}
+    expect:
+      rows:
+        - {customer_no: C-1, price_tier: B, state_raw: "Minn.", state_text: "MINN."}
+        - {customer_no: C-2, price_tier: C, state_raw: "Minnesota", state_text: "MINNESOTA"}
+
+  - name: stg_erp__sales_header_keeps_latest_status
+    description: An order arrives as OPEN and again as INVOICED when it ships. One row, latest status.
+    model: stg_erp__sales_header
+    given:
+      - input: source('erp', 'erp_sales_header')
+        rows:
+          - {order_no: SO-1, customer_no: C-1, order_date: "2026-11-02", status: OPEN, updated_at: "2026-11-02 09:00:00", _ingested_at: "2026-11-03 02:00:00"}
+          - {order_no: SO-1, customer_no: C-1, order_date: "2026-11-02", status: INVOICED, updated_at: "2026-11-04 14:00:00", _ingested_at: "2026-11-05 02:00:00"}
+    expect:
+      rows:
+        - {order_no: SO-1, order_status: INVOICED}
+
+  - name: stg_erp__invoice_line_keeps_returns_negative
+    description: Credit memo lines stay negative and are flagged; blank shipment numbers become null.
+    model: stg_erp__invoice_line
+    given:
+      - input: source('erp', 'erp_invoice_line')
+        rows:
+          - {invoice_no: INV-1, invoice_line_no: "10000", document_type: INVOICE, quantity: "10", unit_price: "38.00", line_discount_pct: "0.0", line_amount: "380.00", shipment_no: SH-1, _ingested_at: "2026-11-03 02:00:00"}
+          - {invoice_no: CM-1, invoice_line_no: "10000", document_type: CREDIT, quantity: "-2", unit_price: "38.00", line_discount_pct: "0.0", line_amount: "-76.00", shipment_no: "", _ingested_at: "2026-11-03 02:00:00"}
+    expect:
+      rows:
+        - {invoice_no: INV-1, is_credit: 0, quantity: 10, line_amount: 380.00, shipment_no: SH-1}
+        - {invoice_no: CM-1, is_credit: 1, quantity: -2, line_amount: -76.00, shipment_no: null}

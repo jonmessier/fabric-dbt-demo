@@ -1,0 +1,216 @@
+/// One row per sale line from the ERP and the taproom, with cost and gross margin. Incremental.
+table Sales
+	lineageTag: ecefc62e-2d0b-5314-890f-ee130de7a093
+
+	/// Billed amount after discounts, net of returns.
+	measure 'Net Revenue' = SUM(Sales[Net Amount])
+		formatString: \$#,0;(\$#,0);\$#,0
+		lineageTag: 6ba975a2-198e-5e46-bf84-5e7f85718cbc
+
+	/// Standard cost of the lines sold.
+	measure Cost = SUM(Sales[Cost Amount])
+		formatString: \$#,0;(\$#,0);\$#,0
+		lineageTag: b0e14065-ce65-5366-a851-ce9ef1160c60
+
+	/// Net revenue minus standard cost.
+	measure 'Gross Margin' = SUM(Sales[Gross Margin Amount])
+		formatString: \$#,0;(\$#,0);\$#,0
+		lineageTag: 0b21c17c-2192-5e22-9400-ecf6de536e11
+
+	/// Gross margin as a share of net revenue.
+	measure 'Gross Margin %' = DIVIDE([Gross Margin], [Net Revenue])
+		formatString: 0.0%
+		lineageTag: 28ac0bfd-a80f-5653-a8df-06ac31115a01
+
+	/// US beer barrels (31 gal), net of returns.
+	measure 'Barrels Sold' = SUM(Sales[Barrels])
+		formatString: #,0.0
+		lineageTag: a4559f6c-54a2-5b39-b38d-e3706dd4cca8
+
+	/// 24 x 12 oz case equivalents.
+	measure 'Case Equivalents Sold' = SUM(Sales[Case Equivalents])
+		formatString: #,0
+		lineageTag: cd2d60c7-2400-502b-8794-11086c07c5c2
+
+	/// Net revenue per barrel sold.
+	measure 'Revenue per Barrel' = DIVIDE([Net Revenue], [Barrels Sold])
+		formatString: \$#,0;(\$#,0);\$#,0
+		lineageTag: aad40b4c-1db4-50e9-a427-b5b9a773c598
+
+	/// Net revenue for the same period last year.
+	measure 'Net Revenue PY' = CALCULATE([Net Revenue], SAMEPERIODLASTYEAR('Date'[Calendar Date]))
+		formatString: \$#,0;(\$#,0);\$#,0
+		lineageTag: 148d8e51-b1c9-553b-9879-6d048845c959
+
+	/// Change in net revenue against the same period last year.
+	measure 'Net Revenue YoY %' = DIVIDE([Net Revenue] - [Net Revenue PY], [Net Revenue PY])
+		formatString: 0.0%
+		lineageTag: 5d99b106-5b24-55ef-9898-718051b40c76
+
+	/// Source system, document number and line number.
+	column 'Sales Line Key'
+		dataType: string
+		isHidden
+		lineageTag: a21cb26b-7263-5288-abf0-0e04ff3a1f79
+		summarizeBy: none
+		sourceColumn: sales_line_key
+
+	/// ERP or POS.
+	column 'Source System'
+		dataType: string
+		lineageTag: 26071994-a756-5218-a814-148eead58d1a
+		summarizeBy: none
+		sourceColumn: source_system
+
+	column 'Document No'
+		dataType: string
+		lineageTag: 898143d9-56ca-50d1-a072-281a930883c5
+		summarizeBy: none
+		sourceColumn: document_no
+
+	column 'Document Line No'
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: fbe5be8a-52f7-5082-b8c4-11e3c32893b2
+		summarizeBy: none
+		sourceColumn: document_line_no
+
+	/// Date as yyyymmdd; joins to dim_date.
+	column 'Date Key'
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 61aba9fb-cda6-5fb6-83df-53924a3746b3
+		summarizeBy: none
+		sourceColumn: date_key
+
+	column 'Sale Date'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: b0d61dc4-b182-5525-aacc-ec0a3eedfc0b
+		summarizeBy: none
+		sourceColumn: sale_date
+
+	/// The customer version valid on the transaction date; joins to dim_customer.
+	column 'Customer Version Key'
+		dataType: string
+		isHidden
+		lineageTag: 042e56e5-283d-565a-804f-227731825275
+		summarizeBy: none
+		sourceColumn: customer_version_key
+
+	/// ERP customer number (TAPROOM for walk-in taproom sales).
+	column 'Customer No'
+		dataType: string
+		lineageTag: f9bf6972-6d13-55f7-901e-1752c55667df
+		summarizeBy: none
+		sourceColumn: customer_no
+
+	/// Product; joins to dim_product.
+	column 'Product Key'
+		dataType: string
+		isHidden
+		lineageTag: dd98a335-e03f-5984-b775-f467db72dcb2
+		summarizeBy: none
+		sourceColumn: product_key
+
+	/// Brand; joins to dim_brand.
+	column 'Brand Code'
+		dataType: string
+		lineageTag: cf330e3e-3007-5e3b-a9e3-98609fa1bbf7
+		summarizeBy: none
+		sourceColumn: brand_code
+
+	/// Sales channel; joins to dim_channel.
+	column Channel
+		dataType: string
+		isHidden
+		lineageTag: a72b6525-f176-5aa9-82c9-a1269c4783c6
+		summarizeBy: none
+		sourceColumn: channel
+
+	/// Two-letter state.
+	column State
+		dataType: string
+		lineageTag: 24276822-4041-5c68-837b-72d370cc7872
+		summarizeBy: none
+		sourceColumn: state_code
+
+	/// 1 for ERP credit memo lines (returns).
+	column 'Is Credit'
+		dataType: boolean
+		lineageTag: 85ea3614-88d9-5ec3-aa09-56019d88bc86
+		summarizeBy: none
+		sourceColumn: is_credit
+
+	/// Units in the line's own unit (keg, case, pour, pack, item).
+	column Quantity
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 89da9ecf-14d4-54a9-ad0b-dc183b51cb06
+		summarizeBy: none
+		sourceColumn: quantity
+
+	/// Billed amount after discounts. Negative on returns.
+	column 'Net Amount'
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		lineageTag: 29ce9ea0-646f-5d6d-9d70-7c868df9bab3
+		summarizeBy: none
+		sourceColumn: net_amount
+
+	/// Volume in US beer barrels (31 gallons). Negative on returns.
+	column Barrels
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		lineageTag: fe3abb66-5f9c-5acc-8927-85535d371b18
+		summarizeBy: none
+		sourceColumn: barrels
+
+	/// Volume in 24 x 12 oz case equivalents.
+	column 'Case Equivalents'
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		lineageTag: 681d687c-0c9d-5a65-89f4-63120ba6cfee
+		summarizeBy: none
+		sourceColumn: case_equivalents
+
+	/// ERP standard cost, or barrels x brand standard cost per barrel for taproom pours. Null for merchandise.
+	column 'Cost Amount'
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		lineageTag: 7785cd6c-542c-5d8a-bee7-04fe58ada390
+		summarizeBy: none
+		sourceColumn: cost_amount
+
+	/// net_amount - cost_amount.
+	column 'Gross Margin Amount'
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		lineageTag: 641e276e-35a4-5201-82c9-3a099ecee54b
+		summarizeBy: none
+		sourceColumn: gross_margin_amount
+
+	/// When the line was loaded into bronze; drives the incremental load.
+	column 'Ingested At'
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		lineageTag: ce1c689d-6c81-5c02-a657-9084b8a85745
+		summarizeBy: none
+		sourceColumn: _ingested_at
+
+	partition Sales = entity
+		mode: directLake
+		source
+			entityName: fct_sales_line
+			schemaName: gold
+			expressionSource: 'DirectLake - wh_analytics'
+

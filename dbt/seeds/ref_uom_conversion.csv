@@ -1,0 +1,10 @@
+package_code,description,unit_type,gallons,barrels,case_equivalents
+KEG-HALF,1/2 bbl keg,KEG,15.5,0.5,6.8889
+KEG-SIXTH,1/6 bbl keg,KEG,5.1667,0.16667,2.2963
+CS-24x16,Case 24 x 16 oz cans,CASE,3.0,0.09677,1.3333
+CS-24x12,Case 24 x 12 oz cans,CASE,2.25,0.07258,1.0
+POUR-16,16 oz draft pour,TAPROOM,0.125,0.00403,0.0556
+POUR-10,10 oz draft pour,TAPROOM,0.078125,0.00252,0.0347
+FLIGHT,"Flight, 4 x 5 oz",TAPROOM,0.15625,0.00504,0.0694
+PK-4x16,4-pack 16 oz cans,TAPROOM,0.5,0.01613,0.2222
+PK-6x12,6-pack 12 oz cans,TAPROOM,0.5625,0.01815,0.25

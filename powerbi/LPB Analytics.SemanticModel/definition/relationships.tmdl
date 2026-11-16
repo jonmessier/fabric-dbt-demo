@@ -1,0 +1,59 @@
+relationship fadbc6a7-0616-5c0a-a788-a60f8e710557
+	fromColumn: Sales.'Date Key'
+	toColumn: Date.'Date Key'
+
+relationship ad656315-ff82-5f57-aa59-ee6f73ecd673
+	fromColumn: Sales.'Product Key'
+	toColumn: Product.'Product Key'
+
+relationship 8eefeeb9-b202-5d8c-846e-ef8e938b674f
+	fromColumn: Sales.'Customer Version Key'
+	toColumn: Customer.'Customer Version Key'
+
+relationship 69709607-a95d-5fe0-afa2-eecebbc666c4
+	fromColumn: Sales.Channel
+	toColumn: Channel.Channel
+
+relationship fc6f403e-7022-554a-834d-d25880af86dc
+	fromColumn: 'Price Realization'.'Order Date Key'
+	toColumn: Date.'Date Key'
+
+relationship 3368103b-a1b8-58e4-8aeb-9b26fbec2385
+	fromColumn: 'Price Realization'.'Product Key'
+	toColumn: Product.'Product Key'
+
+relationship 9742d04d-a710-5e2e-8ca4-f6d9eff276e6
+	fromColumn: 'Price Realization'.'Customer Version Key'
+	toColumn: Customer.'Customer Version Key'
+
+relationship 56bcfa1a-8ab6-511e-914e-d321a35c459b
+	fromColumn: Depletions.'Month Date Key'
+	toColumn: Date.'Date Key'
+
+relationship 42b71cdc-c1a6-594e-90d5-fbbafbce5193
+	fromColumn: Depletions.'Product Key'
+	toColumn: Product.'Product Key'
+
+relationship 3c87ffa3-3d43-5c33-9397-b67800ac735a
+	fromColumn: Depletions.'Distributor Code'
+	toColumn: Distributor.'Distributor Code'
+
+relationship 9fbab5fa-51e2-5e97-bd33-595ff243641b
+	fromColumn: Depletions.'Retail Account Key'
+	toColumn: 'Retail Account'.'Retail Account Key'
+
+relationship 779e62a2-4d1b-596a-93ef-3e22d84b7a44
+	fromColumn: 'Channel Inventory'.'Month Date Key'
+	toColumn: Date.'Date Key'
+
+relationship e8fa1cbe-2f27-5e36-8e56-faa1f80d3015
+	fromColumn: 'Channel Inventory'.'Distributor Code'
+	toColumn: Distributor.'Distributor Code'
+
+relationship ea1a0f7a-7cff-55de-b7d9-fa8af3c6c52d
+	fromColumn: 'Channel Inventory'.'Brand Code'
+	toColumn: Brand.'Brand Code'
+
+relationship 6a10d86a-2a1a-56ef-be07-328834726b72
+	fromColumn: Product.'Brand Code'
+	toColumn: Brand.'Brand Code'

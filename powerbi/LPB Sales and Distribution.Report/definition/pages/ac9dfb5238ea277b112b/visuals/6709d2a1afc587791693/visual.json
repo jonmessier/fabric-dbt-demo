@@ -1,0 +1,150 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.5.0/schema.json",
+  "name": "6709d2a1afc587791693",
+  "position": {
+    "x": 16,
+    "y": 468,
+    "z": 400,
+    "width": 820,
+    "height": 236,
+    "tabOrder": 400
+  },
+  "visual": {
+    "visualType": "pivotTable",
+    "query": {
+      "queryState": {
+        "Rows": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Distributor"
+                    }
+                  },
+                  "Property": "Distributor Name"
+                }
+              },
+              "queryRef": "Distributor.Distributor Name",
+              "nativeQueryRef": "Distributor Name",
+              "displayName": "Distributor"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Brand"
+                    }
+                  },
+                  "Property": "Brand Name"
+                }
+              },
+              "queryRef": "Brand.Brand Name",
+              "nativeQueryRef": "Brand Name",
+              "displayName": "Brand"
+            }
+          ]
+        },
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Channel Inventory"
+                    }
+                  },
+                  "Property": "Sell-in Barrels"
+                }
+              },
+              "queryRef": "Channel Inventory.Sell-in Barrels",
+              "nativeQueryRef": "Sell-in Barrels"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Channel Inventory"
+                    }
+                  },
+                  "Property": "Sell-through Barrels"
+                }
+              },
+              "queryRef": "Channel Inventory.Sell-through Barrels",
+              "nativeQueryRef": "Sell-through Barrels"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Channel Inventory"
+                    }
+                  },
+                  "Property": "Sell-through %"
+                }
+              },
+              "queryRef": "Channel Inventory.Sell-through %",
+              "nativeQueryRef": "Sell-through %"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Channel Inventory"
+                    }
+                  },
+                  "Property": "Ending Inventory"
+                }
+              },
+              "queryRef": "Channel Inventory.Ending Inventory",
+              "nativeQueryRef": "Ending Inventory"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Channel Inventory"
+                    }
+                  },
+                  "Property": "Weeks of Supply"
+                }
+              },
+              "queryRef": "Channel Inventory.Weeks of Supply",
+              "nativeQueryRef": "Weeks of Supply"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Inventory by distributor and brand'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

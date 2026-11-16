@@ -1,0 +1,96 @@
+version: 2
+
+# The three models below turn three different file layouts into one shape:
+# distributor_code, report_month, distributor_account_id, account_name, city, state_code,
+# premise_type, distributor_sku, product_description, quantity, unit_type.
+
+models:
+  - name: stg_dist__depletion_northland
+    description: Northland depletions in the common shape. One row per month, account and distributor SKU.
+    columns:
+      - name: report_month
+        data_tests: [not_null]
+      - name: distributor_sku
+        data_tests:
+          - not_null
+          - relationships: &sku_is_mapped   # shared by all three distributors
+              description: >
+                Checks that every product code in the distributor's depletion report is mapped to one of
+                our SKUs in ref_distributor_sku_xref; a failure means some of that distributor's
+                sell-through can't be tied to a brand, so it lands on the UNMAPPED product and brand and
+                channel-inventory numbers are understated.
+              arguments:
+                to: ref('ref_distributor_sku_xref')
+                field: distributor_sku
+              config:
+                severity: warn   # fix by adding the code to seeds/ref_distributor_sku_xref.csv
+      - name: quantity
+        data_tests: [non_negative]
+
+  - name: stg_dist__depletion_badger
+    description: Badger Ridge depletions in the common shape. One row per month, account and distributor SKU.
+    columns:
+      - name: report_month
+        data_tests: [not_null]
+      - name: distributor_sku
+        data_tests:
+          - not_null
+          - relationships: *sku_is_mapped
+      - name: unit_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [KEG, CASE]
+      - name: quantity
+        data_tests: [non_negative]
+
+  - name: stg_dist__depletion_hawkeye
+    description: Hawkeye Prairie depletions in the common shape. One row per month, account and distributor SKU.
+    columns:
+      - name: report_month
+        data_tests: [not_null]
+      - name: distributor_sku
+        data_tests:
+          - not_null
+          - relationships: *sku_is_mapped
+      - name: quantity
+        data_tests: [non_negative]
+
+unit_tests:
+  - name: stg_dist__depletion_northland_merges_case_and_keg_columns
+    description: Separate Cases and Kegs columns become one quantity with a unit type.
+    model: stg_dist__depletion_northland
+    given:
+      - input: source('dist', 'dist_depletion_northland')
+        rows:
+          - {period: "2026-09", acct: A0000001, account_name: Copper Kettle Tavern, st: MN, premise: "ON", supplier_item: NB20004, item_desc: North Shore Lager 1/2 bbl keg, cases: "0", kegs: "6", _ingested_at: "2026-10-09 02:00:00"}
+          - {period: "2026-09", acct: A0000002, account_name: Lakeside Liquor, st: MN, premise: "OFF", supplier_item: NB20031, item_desc: North Shore Lager Case 24 x 16 oz cans, cases: "40", kegs: "0", _ingested_at: "2026-10-09 02:00:00"}
+    expect:
+      rows:
+        - {distributor_code: NORTHLAND, report_month: "2026-09-01", distributor_account_id: A0000001, premise_type: ON_PREMISE, quantity: 6, unit_type: KEG}
+        - {distributor_code: NORTHLAND, report_month: "2026-09-01", distributor_account_id: A0000002, premise_type: OFF_PREMISE, quantity: 40, unit_type: CASE}
+
+  - name: stg_dist__depletion_badger_reads_us_dates_and_units
+    description: A month-end date in MM/DD/YYYY becomes the first of that month; KG and CS become KEG and CASE.
+    model: stg_dist__depletion_badger
+    given:
+      - input: source('dist', 'dist_depletion_badger')
+        rows:
+          - {month_ending: "09/30/2026", retailer_id: WI-10001, retailer: IRON BRIDGE PUB, state: WI, product_code: LPNSL-HB, qty: "3", uom: KG, _ingested_at: "2026-10-13 02:00:00"}
+          - {month_ending: "12/31/2025", retailer_id: WI-10002, retailer: CEDAR POINT LIQUOR, state: WI, product_code: LPNSL-16C, qty: "25", uom: CS, _ingested_at: "2026-01-13 02:00:00"}
+    expect:
+      rows:
+        - {distributor_code: BADGER, report_month: "2026-09-01", distributor_sku: LPNSL-HB, quantity: 3, unit_type: KEG}
+        - {distributor_code: BADGER, report_month: "2025-12-01", distributor_sku: LPNSL-16C, quantity: 25, unit_type: CASE}
+
+  - name: stg_dist__depletion_hawkeye_reads_yyyymm_and_keeps_latest_file
+    description: RPT_YYYYMM becomes a date, and a corrected file replaces the earlier row for the same key.
+    model: stg_dist__depletion_hawkeye
+    given:
+      - input: source('dist', 'dist_depletion_hawkeye')
+        rows:
+          - {rpt_yyyymm: "202609", outlet_cd: "30012", outlet_nm: Prairie Depot Tavern, premise: ON-PREM, brand_pkg: "600017", pkg_desc: North Shore Lager 1/6 bbl keg, units_sold: "4", _ingested_at: "2026-11-03 02:00:00"}
+          - {rpt_yyyymm: "202609", outlet_cd: "30012", outlet_nm: Prairie Depot Tavern, premise: ON-PREM, brand_pkg: "600017", pkg_desc: North Shore Lager 1/6 bbl keg, units_sold: "5", _ingested_at: "2026-11-10 02:00:00"}
+    expect:
+      rows:
+        - {distributor_code: HAWKEYE, report_month: "2026-09-01", distributor_account_id: "30012", state_code: IA, premise_type: ON_PREMISE, quantity: 5, unit_type: KEG}

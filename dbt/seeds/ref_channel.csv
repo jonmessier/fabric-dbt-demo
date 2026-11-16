@@ -1,0 +1,6 @@
+source_system,customer_type,channel,channel_group
+ERP,DISTRIBUTOR,Wholesale,Three-tier
+ERP,RETAIL,Direct - Off premise,Self-distribution
+ERP,ON_PREMISE,Direct - On premise,Self-distribution
+ERP,EVENT,Events,Self-distribution
+POS,TAPROOM,Taproom,Taproom

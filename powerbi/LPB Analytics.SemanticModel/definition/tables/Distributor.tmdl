@@ -1,0 +1,38 @@
+/// The three wholesale distributors.
+table Distributor
+	lineageTag: c2875c67-d8e3-51c5-81f3-8bf49de713bd
+
+	/// Distributor; joins to dim_distributor.
+	column 'Distributor Code'
+		dataType: string
+		lineageTag: e5626543-1b3e-5c37-aa38-4028121126c0
+		summarizeBy: none
+		sourceColumn: distributor_code
+
+	column 'Distributor Name'
+		dataType: string
+		lineageTag: f98c0a5f-4701-54ef-8945-422e0c97f9a7
+		summarizeBy: none
+		sourceColumn: distributor_name
+
+	/// The distributor's customer number in the ERP.
+	column 'Erp Customer No'
+		dataType: string
+		lineageTag: 302b6f98-f7d3-5ef1-af40-2e96255e914e
+		summarizeBy: none
+		sourceColumn: erp_customer_no
+
+	/// Two-letter state.
+	column State
+		dataType: string
+		lineageTag: 723ea3e5-0960-57e9-a750-0934e8cd5c3a
+		summarizeBy: none
+		sourceColumn: state_code
+
+	partition Distributor = entity
+		mode: directLake
+		source
+			entityName: dim_distributor
+			schemaName: gold
+			expressionSource: 'DirectLake - wh_analytics'
+

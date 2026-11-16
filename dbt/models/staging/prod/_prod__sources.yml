@@ -1,0 +1,20 @@
+version: 2
+
+sources:
+  - name: prod
+    description: Brewery production system exports (JSON) as landed in the bronze lakehouse.
+    database: "{{ env_var('FABRIC_LAKEHOUSE', 'lh_bronze') }}"
+    schema: dbo
+    loaded_at_field: _ingested_at
+    freshness:
+      warn_after: {count: 26, period: hour}
+      error_after: {count: 50, period: hour}
+    tables:
+      - name: prod_batch
+        description: Brew batches. A batch arrives when brewed and again when packaged.
+      - name: prod_ingredient_usage
+        description: Ingredients consumed per batch.
+      - name: prod_packaging_run
+        description: Packaging runs (one per batch and item).
+      - name: prod_batch_cost
+        description: Cost postings per batch and cost type.

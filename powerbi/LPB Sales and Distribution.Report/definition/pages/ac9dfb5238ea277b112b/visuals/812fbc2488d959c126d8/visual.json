@@ -1,0 +1,97 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.5.0/schema.json",
+  "name": "812fbc2488d959c126d8",
+  "position": {
+    "x": 848,
+    "y": 200,
+    "z": 300,
+    "width": 416,
+    "height": 256,
+    "tabOrder": 300
+  },
+  "visual": {
+    "visualType": "clusteredBarChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Distributor"
+                    }
+                  },
+                  "Property": "Distributor Name"
+                }
+              },
+              "queryRef": "Distributor.Distributor Name",
+              "nativeQueryRef": "Distributor Name",
+              "displayName": "Distributor"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Depletions"
+                    }
+                  },
+                  "Property": "Depletion Barrels"
+                }
+              },
+              "queryRef": "Depletions.Depletion Barrels",
+              "nativeQueryRef": "Depletion Barrels"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Depletions"
+                  }
+                },
+                "Property": "Depletion Barrels"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": false
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Depletions by distributor'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

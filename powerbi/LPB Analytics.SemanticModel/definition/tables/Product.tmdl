@@ -1,0 +1,79 @@
+/// One row per product as sold: ERP items, taproom serving sizes, merchandise, and UNMAPPED.
+table Product
+	lineageTag: d8e3a894-8c99-50c9-99f1-b7553743f40e
+
+	/// Product; joins to dim_product.
+	column 'Product Key'
+		dataType: string
+		isHidden
+		lineageTag: 1a365a28-4083-5ece-b61f-07fdf7cbb786
+		summarizeBy: none
+		sourceColumn: product_key
+
+	/// ERP item number; null for taproom products.
+	column 'Item No'
+		dataType: string
+		lineageTag: d751e2cf-e214-51f6-ab58-28fefcc628e4
+		summarizeBy: none
+		sourceColumn: item_no
+
+	column 'Product Name'
+		dataType: string
+		lineageTag: 7ed41a48-2b97-5d6a-b181-2d2534d1bfc4
+		summarizeBy: none
+		sourceColumn: product_name
+
+	/// Brand; joins to dim_brand.
+	column 'Brand Code'
+		dataType: string
+		lineageTag: d26b43de-6595-59b7-8cee-44cc660556fd
+		summarizeBy: none
+		sourceColumn: brand_code
+
+	column 'Package Code'
+		dataType: string
+		lineageTag: 9ed7b18b-0960-5d12-a8ce-2e210d164224
+		summarizeBy: none
+		sourceColumn: package_code
+
+	column 'Package Description'
+		dataType: string
+		lineageTag: 3b977d7f-d3dd-5744-a9a7-b1d9b2d04ada
+		summarizeBy: none
+		sourceColumn: package_description
+
+	column 'Unit Type'
+		dataType: string
+		lineageTag: edefe76d-16e4-50b9-b65f-f44f19c3ffeb
+		summarizeBy: none
+		sourceColumn: unit_type
+
+	/// Barrels in one unit of the product.
+	column 'Barrels Per Unit'
+		dataType: double
+		formatString: #,0.00
+		lineageTag: e9a25e1b-d9ca-5d9b-8f9b-437ee81a7661
+		summarizeBy: none
+		sourceColumn: barrels_per_unit
+
+	/// ERP, TAPROOM or UNMAPPED.
+	column 'Product Source'
+		dataType: string
+		lineageTag: 392260bc-d479-5433-9ddd-0b18419a55f7
+		summarizeBy: none
+		sourceColumn: product_source
+
+	column 'Standard Cost'
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 160ecd62-b8b2-550f-8a21-9aa254027299
+		summarizeBy: none
+		sourceColumn: standard_cost
+
+	partition Product = entity
+		mode: directLake
+		source
+			entityName: dim_product
+			schemaName: gold
+			expressionSource: 'DirectLake - wh_analytics'
+

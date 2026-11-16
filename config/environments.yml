@@ -1,0 +1,31 @@
+# Names of everything the scripts create or look up, per environment.
+# IDs are never stored here: scripts resolve them by name at run time.
+# Tenant and capacity come from .env (FABRIC_TENANT_ID, FABRIC_CAPACITY_NAME).
+project: lpb
+company: Larkspur & Pine Brewing Co.
+
+items:            # same item names in every workspace
+  lakehouse: lh_bronze
+  warehouse: wh_analytics
+  ingest_notebook: nb_ingest_bronze
+  dbt_job: dbt_lpb
+  pipeline: pl_daily_load
+warehouse_schemas: [ref, silver, snapshots, gold, audit]
+landing_path: Files/landing          # inside lh_bronze
+
+environments:
+  dev:
+    workspace: LPB-Data-Dev
+    git_sync: true                   # synced to main, folder fabric/
+    git_directory: fabric
+  test:
+    workspace: LPB-Data-Test
+    git_sync: false                  # deployed by scripts/deploy.py (fabric-cicd)
+  prod:
+    workspace: LPB-Data-Prod
+    git_sync: false
+
+identity:
+  app_registration: app-lpb-fabric-cicd
+  security_group: sg-lpb-fabric-automation
+  github_repo: JMFultonAnalytics/dbt-tutorial

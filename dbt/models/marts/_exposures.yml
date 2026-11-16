@@ -1,0 +1,28 @@
+version: 2
+
+exposures:
+  - name: lpb_semantic_model
+    label: Larkspur & Pine sales and operations (semantic model)
+    type: dashboard
+    maturity: medium
+    url: https://app.fabric.microsoft.com/
+    description: >
+      Direct Lake semantic model over the gold schema (Phase 8). Declared here so dbt docs show
+      what breaks downstream if a gold model changes, and so `dbt build -s +exposure:lpb_semantic_model`
+      builds exactly what the model needs.
+    owner:
+      name: Jon Messier
+    depends_on:
+      - ref('dim_date')
+      - ref('dim_brand')
+      - ref('dim_product')
+      - ref('dim_customer')
+      - ref('dim_distributor')
+      - ref('dim_retail_account')
+      - ref('dim_channel')
+      - ref('fct_sales_line')
+      - ref('fct_price_realization')
+      - ref('fct_depletion')
+      - ref('fct_channel_inventory_monthly')
+      - ref('fct_batch')
+      - ref('fct_excise_tax_monthly')

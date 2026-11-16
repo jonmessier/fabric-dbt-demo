@@ -1,0 +1,12 @@
+/// Direct Lake on OneLake: reads the gold Delta tables of wh_analytics straight from OneLake.
+/// {{WORKSPACE_ID}} and {{WAREHOUSE_ID}} are filled in by scripts/powerbi.py at deploy time,
+/// so no IDs are stored in git.
+expression 'DirectLake - wh_analytics' =
+		let
+		    Source = AzureStorage.DataLake("https://onelake.dfs.fabric.microsoft.com/{{WORKSPACE_ID}}/{{WAREHOUSE_ID}}", [HierarchicalNavigation=true])
+		in
+		    Source
+	lineageTag: f5fa3a5b-dc03-54d4-af75-908e202c2986
+
+	annotation PBI_IncludeFutureArtifacts = False
+

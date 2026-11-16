@@ -1,0 +1,215 @@
+version: 2
+
+# Gold layer: contracts are enforced, so every column and its exact type is listed here.
+# Change the model and this file together, or the build fails.
+
+models:
+- name: dim_brand
+  description: One row per brand (the liquid), plus MERCH and UNMAPPED members.
+  config:
+    contract:
+      enforced: true
+  columns:
+  - name: brand_code
+    data_type: varchar(10)
+    description: Brand; joins to dim_brand.
+    data_tests:
+    - unique
+    - not_null
+  - name: brand_name
+    data_type: varchar(80)
+  - name: style
+    data_type: varchar(40)
+  - name: product_category
+    data_type: varchar(20)
+  - name: abv
+    data_type: decimal(4,1)
+  - name: standard_cost_per_bbl
+    data_type: decimal(18,2)
+    description: Average ERP standard cost per barrel across the brand's packages; used to cost taproom pours.
+- name: dim_channel
+  description: Sales channels and channel groups.
+  config:
+    contract:
+      enforced: true
+  columns:
+  - name: channel
+    data_type: varchar(40)
+    description: Wholesale, Taproom, Direct - On premise, Direct - Off premise, Events.
+    data_tests:
+    - unique
+    - not_null
+  - name: channel_group
+    data_type: varchar(40)
+- name: dim_customer
+  description: ERP customers as a type 2 dimension (one row per version), plus a TAPROOM member.
+  config:
+    contract:
+      enforced: true
+  columns:
+  - name: customer_version_key
+    data_type: varchar(64)
+    description: The customer version valid on the transaction date; joins to dim_customer.
+    data_tests:
+    - unique
+    - not_null
+  - name: customer_no
+    data_type: varchar(20)
+    description: ERP customer number (TAPROOM for walk-in taproom sales).
+  - name: customer_name
+    data_type: varchar(120)
+  - name: customer_type
+    data_type: varchar(20)
+  - name: channel
+    data_type: varchar(40)
+    description: Sales channel; joins to dim_channel.
+  - name: city
+    data_type: varchar(60)
+  - name: state_code
+    data_type: varchar(2)
+    description: Two-letter state.
+  - name: sales_region
+    data_type: varchar(40)
+  - name: price_tier
+    data_type: varchar(5)
+    description: 'Price list tier: A distributor, B key account, C standard, D event.'
+  - name: territory
+    data_type: varchar(30)
+  - name: salesperson
+    data_type: varchar(60)
+  - name: valid_from
+    data_type: datetime2(6)
+    description: When this version became current (the ERP updated_at).
+  - name: valid_to
+    data_type: datetime2(6)
+    description: When it was replaced; null for the current version.
+  - name: is_current
+    data_type: bit
+    description: 1 for the current version of each customer.
+- name: dim_date
+  description: One row per calendar day with calendar and 4-4-5 fiscal attributes.
+  config:
+    contract:
+      enforced: true
+  columns:
+  - name: date_key
+    data_type: int
+    description: Date as yyyymmdd; joins to dim_date.
+    data_tests:
+    - unique
+    - not_null
+  - name: calendar_date
+    data_type: date
+    description: The date.
+  - name: calendar_year
+    data_type: int
+  - name: calendar_quarter
+    data_type: int
+  - name: calendar_month
+    data_type: int
+  - name: month_name
+    data_type: varchar(10)
+  - name: month_start_date
+    data_type: date
+  - name: day_of_week
+    data_type: int
+    description: 1 = Monday ... 7 = Sunday.
+  - name: day_name
+    data_type: varchar(10)
+  - name: is_weekend
+    data_type: bit
+    description: Saturday or Sunday.
+  - name: fiscal_year
+    data_type: int
+  - name: fiscal_quarter
+    data_type: int
+  - name: fiscal_period
+    data_type: int
+  - name: fiscal_period_name
+    data_type: varchar(12)
+    description: For example FY2026-P10.
+  - name: fiscal_period_start_date
+    data_type: date
+  - name: fiscal_period_end_date
+    data_type: date
+- name: dim_distributor
+  description: The three wholesale distributors.
+  config:
+    contract:
+      enforced: true
+  columns:
+  - name: distributor_code
+    data_type: varchar(20)
+    description: Distributor; joins to dim_distributor.
+    data_tests:
+    - unique
+    - not_null
+  - name: distributor_name
+    data_type: varchar(100)
+  - name: erp_customer_no
+    data_type: varchar(20)
+    description: The distributor's customer number in the ERP.
+  - name: state_code
+    data_type: varchar(2)
+    description: Two-letter state.
+- name: dim_product
+  description: 'One row per product as sold: ERP items, taproom serving sizes, merchandise, and UNMAPPED.'
+  config:
+    contract:
+      enforced: true
+  columns:
+  - name: product_key
+    data_type: varchar(40)
+    description: Product; joins to dim_product.
+    data_tests:
+    - unique
+    - not_null
+  - name: item_no
+    data_type: varchar(20)
+    description: ERP item number; null for taproom products.
+  - name: product_name
+    data_type: varchar(160)
+  - name: brand_code
+    data_type: varchar(10)
+    description: Brand; joins to dim_brand.
+  - name: package_code
+    data_type: varchar(20)
+  - name: package_description
+    data_type: varchar(60)
+  - name: unit_type
+    data_type: varchar(10)
+  - name: barrels_per_unit
+    data_type: decimal(12,6)
+    description: Barrels in one unit of the product.
+  - name: product_source
+    data_type: varchar(10)
+    description: ERP, TAPROOM or UNMAPPED.
+  - name: standard_cost
+    data_type: decimal(18,2)
+- name: dim_retail_account
+  description: Bars, restaurants and stores the distributors sell to.
+  config:
+    contract:
+      enforced: true
+  columns:
+  - name: retail_account_key
+    data_type: varchar(64)
+    description: Distributor code and the distributor's own account id.
+    data_tests:
+    - unique
+    - not_null
+  - name: distributor_code
+    data_type: varchar(20)
+    description: Distributor; joins to dim_distributor.
+  - name: distributor_account_id
+    data_type: varchar(40)
+  - name: account_name
+    data_type: varchar(120)
+  - name: premise_type
+    data_type: varchar(20)
+    description: ON_PREMISE (bars, restaurants) or OFF_PREMISE (stores).
+  - name: city
+    data_type: varchar(60)
+  - name: state_code
+    data_type: varchar(2)
+    description: Two-letter state.

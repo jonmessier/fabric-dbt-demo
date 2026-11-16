@@ -1,0 +1,68 @@
+version: 2
+
+# Business-owned reference data. Edit the CSVs in pull requests; dbt seed loads them into the ref schema.
+# First versions were written by scripts/generate_data.py --write-seeds so the codes match the generated data.
+seeds:
+  - name: ref_distributor
+    description: The three wholesale distributors and their ERP customer numbers.
+    config:
+      column_types: {distributor_code: varchar(20), distributor_name: varchar(100), erp_customer_no: varchar(20), state_code: varchar(2)}
+    columns:
+      - name: distributor_code
+        data_tests: [unique, not_null]
+
+  - name: ref_distributor_sku_xref
+    description: >
+      Maps each distributor's own product code to our ERP item number. Depletion rows whose code
+      is missing here cannot be tied to a product; the fix is to add a row to this file.
+    config:
+      column_types: {distributor_code: varchar(20), distributor_sku: varchar(40), item_no: varchar(20)}
+    data_tests:
+      - unique:
+          column_name: "concat(distributor_code, '|', distributor_sku)"
+    columns:
+      - name: distributor_sku
+        data_tests: [not_null]
+      - name: item_no
+        data_tests: [not_null]
+
+  - name: ref_distributor_account_xref
+    description: Retail accounts as each distributor identifies them, with a cleaned name and premise type.
+    config:
+      column_types: {distributor_code: varchar(20), distributor_account_id: varchar(40), account_name: varchar(120), premise_type: varchar(20), city: varchar(60), state_code: varchar(2)}
+
+  - name: ref_channel
+    description: Maps source system and customer type to sales channel.
+    config:
+      column_types: {source_system: varchar(10), customer_type: varchar(20), channel: varchar(40), channel_group: varchar(40)}
+
+  - name: ref_state_region
+    description: >
+      Maps the free-text state values found in source systems (upper-cased and trimmed) to a state code
+      and sales region.
+    config:
+      column_types: {state_text: varchar(40), state_code: varchar(2), state_name: varchar(40), sales_region: varchar(40)}
+    columns:
+      - name: state_text
+        data_tests: [unique, not_null]
+
+  - name: ref_excise_tax_rate
+    description: State beer excise rate per barrel. Illustrative demo values, not actual tax rates.
+    config:
+      column_types: {state_code: varchar(2), rate_per_barrel: "decimal(9,4)", effective_from: date}
+
+  - name: ref_fiscal_calendar_445
+    description: Fiscal periods on a 4-4-5 week calendar (52-week years starting on a Sunday).
+    config:
+      column_types: {fiscal_year: int, fiscal_quarter: int, fiscal_period: int, period_name: varchar(12), start_date: date, end_date: date, weeks_in_period: int}
+    columns:
+      - name: period_name
+        data_tests: [unique, not_null]
+
+  - name: ref_uom_conversion
+    description: Gallons, barrels (31 gal) and 24x12oz case equivalents per package or taproom serving size.
+    config:
+      column_types: {package_code: varchar(20), description: varchar(60), unit_type: varchar(10), gallons: "decimal(12,6)", barrels: "decimal(12,6)", case_equivalents: "decimal(12,4)"}
+    columns:
+      - name: package_code
+        data_tests: [unique, not_null]

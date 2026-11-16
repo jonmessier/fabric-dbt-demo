@@ -1,99 +1,75 @@
-# VS Code + dbt Starter
+# Larkspur & Pine: dbt on Microsoft Fabric
 
-A reproducible IDE setup for dbt development. Drop this into a repo and anyone who
-clones it gets the same editor configuration.
+A demo of dbt on Microsoft Fabric, built the way a client project would be. The company is
+fictional: **Larkspur & Pine Brewing Co.**, a regional craft beverage maker that sells through
+distributors, a taproom, and direct accounts.
 
-## What's here
+- **Bronze**: Lakehouse `lh_bronze`, raw files from four source systems, loaded as-is
+- **Silver**: Warehouse `wh_analytics` (`ref`, `silver`, `snapshots`), built by dbt
+- **Gold**: Warehouse `wh_analytics.gold`, a star schema with enforced contracts, built by dbt
+- **Audit**: failing test rows and a run log, queryable in the warehouse
 
-| File | Purpose |
-|---|---|
-| `.vscode/extensions.json` | Extension recommendations — VS Code prompts on folder open |
-| `.vscode/settings.json` | Workspace settings (Jinja highlighting, linting, file exclusions) |
-| `bootstrap.ps1` | Installs extensions, creates a venv, installs dbt + adapter |
+The full design is in [docs/DESIGN.md](docs/DESIGN.md). Working rules for Claude Code are in [CLAUDE.md](CLAUDE.md).
 
-## Quick start
+## Status
 
-```powershell
-git clone <this-repo>
-cd <this-repo>
-.\bootstrap.ps1
-code .
-```
+| Phase | What | State |
+|---|---|---|
+| 0 | Design | done |
+| 1 | Spike: confirm what works on Fabric ([docs/SPIKE.md](docs/SPIKE.md)) | not started |
+| 2 | Repo scaffold, data generator, dbt skeleton with seeds | done |
+| 4 | Bronze ingest notebook (`notebooks/nb_ingest_bronze.py`) | written, tested on local Spark; not run in Fabric |
+| 5 | dbt staging, snapshot, intermediate and gold (13 models with contracts), audit run log, 16 unit tests | written, checked locally; not run on Fabric |
+| 3, 6, 7 | Fabric provisioning, dbt job, CI/CD | not started |
 
-Then: Command Palette → **Python: Select Interpreter** → pick `.venv`.
-
-## For your team
-
-The `.vscode/` folder is the part that matters for sharing. Committing it means
-teammates get the extension prompt and the settings automatically — no script, no
-instructions. `bootstrap.ps1` is only needed for the Python side, which VS Code
-can't configure on its own.
-
-If someone dismisses the extension prompt: Command Palette →
-**Extensions: Show Recommended Extensions**.
-
-## Adapter options
+## Quick start (Windows, PowerShell)
 
 ```powershell
-.\bootstrap.ps1 -Adapter duckdb        # default — no credentials, best for learning
-.\bootstrap.ps1 -Adapter postgres
-.\bootstrap.ps1 -Adapter snowflake
-.\bootstrap.ps1 -Adapter fabric        # Fabric Warehouse (T-SQL)
-.\bootstrap.ps1 -Adapter fabricspark   # Fabric Lakehouse (Spark/Livy)
+.\tasks.ps1 help          # list every task
+.\tasks.ps1 venv          # build .venv from requirements.txt
+.\tasks.ps1 prereqs       # check tools and sign-in
+.\tasks.ps1 data          # generate ~18 months of source files into data\landing
+.\tasks.ps1 advance-day   # generate the next business day
+.\tasks.ps1 parse         # check the dbt project without connecting
 ```
 
-**duckdb is the right starting point for learning.** It runs entirely locally, needs
-no connection details, and every dbt concept — refs, models, tests, seeds, snapshots,
-macros — behaves identically to a warehouse adapter. Learn on duckdb, then swap the
-profile.
-
-## Two adapters in one repo
-
-`dbt-fabric` and `dbt-fabricspark` pin different transitive dependencies and will
-conflict in a shared environment. Use separate venvs:
+To run dbt against Fabric, copy `.env.example` to `.env`, fill it in, run `az login`, then:
 
 ```powershell
-.\bootstrap.ps1 -Adapter fabricspark -VenvName .venv-silver -SkipExtensions
-.\bootstrap.ps1 -Adapter fabric      -VenvName .venv-gold   -SkipExtensions
+. .\scripts\load_env.ps1
+cd dbt
+dbt debug
+dbt seed
 ```
 
-VS Code switches interpreters per workspace folder, so a multi-root workspace with
-`silver/` and `gold/` as separate roots gets the right environment in each.
+## The generated data
 
-## sqlfluff config
+`scripts/generate_data.py` simulates four systems and writes files the way they would really arrive:
 
-Dialect is set per dbt project, not in VS Code settings, so different layers can use
-different dialects. Create a `.sqlfluff` beside each `dbt_project.yml`:
+| System | Files | Folder |
+|---|---|---|
+| ERP | customers, items, effective-dated price list, orders, shipments, invoices (CSV) | `data/landing/erp/<date>/` |
+| Brewery production | batches, ingredient usage, packaging runs, costs (JSON Lines) | `data/landing/prod/<date>/` |
+| Taproom POS | transactions with nested line items (JSON Lines) | `data/landing/pos/<date>/` |
+| Distributors | monthly depletion reports in three different layouts | `data/landing/dist/<date received>/` |
 
-```ini
-[sqlfluff]
-templater = dbt
-dialect = tsql          # or sparksql, duckdb, postgres, snowflake
-max_line_length = 120
+It is deterministic, and it plants realistic problems for dbt to catch: a POS file sent twice,
+distributor product codes missing from the cross-reference seed, a late distributor file,
+invoices pointing at shipments that do not exist, a batch that packaged more beer than it brewed,
+a state with no excise rate, and messy state names. `-Clean` generates the same data without them.
 
-[sqlfluff:templater:dbt]
-project_dir = .
-profiles_dir = ~/.dbt
+`advance-day` then delivers surprises on a schedule: day 1 a bar (C-2001) moves and is upgraded from
+price tier C to B and yesterday's POS file arrives again, day 2 a price increase, day 3 the late distributor file.
 
-[sqlfluff:rules:capitalisation.keywords]
-capitalisation_policy = lower
+## Repo layout
+
 ```
-
-## Notes
-
-**The official dbt Labs VS Code extension won't work here.** It requires the dbt Fusion
-engine and doesn't support dbt Core or community adapters. `dbt Power User` is the
-one to use.
-
-**Jinja highlighting is scoped to dbt folders on purpose.** Applying `jinja-sql` to all
-`*.sql` files breaks the mssql extension's Execute Query, since it only runs against
-files in plain `sql` mode. The globs in `settings.json` cover `models/`, `macros/`,
-`tests/`, and `analyses/` only.
-
-**Never commit `profiles.yml`.** It lives at `%USERPROFILE%\.dbt\profiles.yml` and holds
-credentials. Add `profiles.yml`, `target/`, `dbt_packages/`, `logs/`, and `.venv*` to
-`.gitignore`.
-
-**Fabric Data Engineering extension** — if you need to author Fabric notebooks locally,
-install it from the Marketplace by name. It's deliberately not in the script; the
-publisher ID changes and a wrong ID fails silently.
+CLAUDE.md, .claude/      instructions, permissions and slash commands for Claude Code
+tasks.ps1                single entry point
+config/environments.yml  workspace and item names per environment
+scripts/                 data generator, environment loader, prerequisite check
+notebooks/               Fabric notebook that loads the landing zone into bronze
+dbt/                     the dbt project: seeds, staging, snapshot, intermediate, gold
+docs/                    design, spike checklist, IDE setup notes
+bootstrap.ps1, .vscode/  VS Code setup (see docs/ide-setup.md)
+```

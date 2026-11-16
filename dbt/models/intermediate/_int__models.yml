@@ -1,0 +1,198 @@
+version: 2
+
+models:
+  - name: int_sales_lines_unioned
+    description: >
+      Every sale from the ERP (invoice and credit memo lines) and the taproom POS (completed
+      transactions) at one grain, with barrels, case equivalents and sales channel.
+    columns:
+      - name: sales_line_key
+        data_tests: [unique, not_null]
+      - name: channel
+        data_tests: [not_null]
+      - name: barrels
+        description: Negative on returns. Null for merchandise.
+      - name: brand_code
+        description: Null only for taproom merchandise.
+      - name: product_code
+        description: ERP item number, or brand plus serving size for taproom pours (NSL-POUR-16), or the POS code for merchandise.
+        data_tests: [not_null]
+
+  - name: int_depletions_unioned
+    description: The three distributor depletion reports stacked in one shape.
+
+  - name: int_depletions_mapped
+    description: >
+      Depletions in our own item and account terms. Rows whose distributor SKU is not in
+      ref_distributor_sku_xref are kept with is_sku_mapped = 0.
+    columns:
+      - name: depletion_key
+        data_tests: [unique, not_null]
+      - name: is_sku_mapped
+        description: 0 when the distributor's product code is not in the cross-reference seed yet.
+
+  - name: int_batch_summary
+    description: One row per brew batch with packaged volume, yield, loss and cost per packaged barrel.
+    columns:
+      - name: batch_id
+        data_tests: [unique, not_null]
+      - name: yield_pct
+        description: Packaged barrels divided by brewed barrels. Null until the batch is packaged.
+        data_tests:
+          - between:
+              description: >
+                Checks that each batch's yield (packaged barrels divided by brewed barrels) is between
+                0 and 1; a failure means a batch shows more beer packaged than brewed, almost always a
+                keying error in production, so its cost per barrel and the production reports are wrong
+                until the batch is corrected.
+              arguments:
+                min_value: 0
+                max_value: 1
+              config:
+                severity: error   # more beer out than went in means a keying error; stop production reporting
+
+  - name: int_order_price_vs_list
+    description: >
+      Each invoice line against the list price in effect on the order date for the customer's
+      price tier on that date (from the customer snapshot).
+    columns:
+      - name: invoice_line_key
+        data_tests: [unique, not_null]
+      - name: list_price
+        description: Null when no price list row covers the item, tier and order date.
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: price_realization_pct
+        description: Net amount divided by list amount; 1.0 means sold at list.
+
+unit_tests:
+  - name: int_sales_lines_unioned_converts_volume_and_keeps_returns_negative
+    description: >
+      A keg invoice, a credit memo, a taproom pour, a refunded taproom sale and a merch line.
+      Barrels come from the seed, returns stay negative, refunds drop out, channels attach.
+    model: int_sales_lines_unioned
+    given:
+      - input: ref('stg_erp__invoice_line')
+        rows:
+          - {invoice_no: INV-1, invoice_line_no: 10000, invoice_date: "2026-10-05", customer_no: D-1001, item_no: NSL-K50, is_credit: 0, quantity: 4, line_amount: 540.00}
+          - {invoice_no: CM-1, invoice_line_no: 10000, invoice_date: "2026-10-20", customer_no: C-2001, item_no: NSL-C16, is_credit: 1, quantity: -2, line_amount: -76.00}
+      - input: ref('stg_erp__item')
+        rows:
+          - {item_no: NSL-K50, brand_code: NSL, package_code: KEG-HALF, standard_cost: 75.00}
+          - {item_no: NSL-C16, brand_code: NSL, package_code: CS-24x16, standard_cost: 17.00}
+      - input: ref('stg_erp__customer')
+        rows:
+          - {customer_no: D-1001, customer_type: DISTRIBUTOR, state_text: MN}
+          - {customer_no: C-2001, customer_type: ON_PREMISE, state_text: "MINN."}
+      - input: ref('ref_state_region')
+        rows:
+          - {state_text: MN, state_code: MN}
+          - {state_text: "MINN.", state_code: MN}
+      - input: ref('stg_pos__line_item')
+        rows:
+          - {transaction_id: T-1, line_id: 1, item_code: DRAFT-PBI, item_name: Pine Barrens IPA, brand_code: PBI, package_code: POUR-16, quantity: 2, line_amount: 14.00}
+          - {transaction_id: T-1, line_id: 2, item_code: MERCH-HAT, item_name: Pine Trucker Hat, brand_code: null, package_code: null, quantity: 1, line_amount: 22.00}
+          - {transaction_id: T-2, line_id: 1, item_code: DRAFT-PBI, item_name: Pine Barrens IPA, brand_code: PBI, package_code: POUR-16, quantity: 1, line_amount: 7.00}
+      - input: ref('stg_pos__transaction')
+        rows:
+          - {transaction_id: T-1, transaction_date: "2026-10-05", transaction_status: COMPLETED}
+          - {transaction_id: T-2, transaction_date: "2026-10-05", transaction_status: REFUNDED}
+      - input: ref('ref_uom_conversion')
+        rows:
+          - {package_code: KEG-HALF, barrels: 0.5, case_equivalents: 6.8889}
+          - {package_code: CS-24x16, barrels: 0.09677, case_equivalents: 1.3333}
+          - {package_code: POUR-16, description: 16 oz draft pour, barrels: 0.004032, case_equivalents: 0.0556}
+      - input: ref('ref_channel')
+        rows:
+          - {source_system: ERP, customer_type: DISTRIBUTOR, channel: Wholesale}
+          - {source_system: ERP, customer_type: ON_PREMISE, channel: "Direct - On premise"}
+          - {source_system: POS, customer_type: TAPROOM, channel: Taproom}
+    expect:
+      rows:
+        # Every row lists the same columns: dbt-fabric unions the rows as written (docs/SPIKE.md item 5).
+        - {sales_line_key: "ERP|INV-1|10000", product_code: NSL-K50, product_name: null, channel: Wholesale, state_code: MN, barrels: 2.0000, standard_cost_amount: 300.00}
+        - {sales_line_key: "ERP|CM-1|10000", product_code: NSL-C16, product_name: null, channel: "Direct - On premise", state_code: MN, barrels: -0.1935, standard_cost_amount: -34.00}
+        - {sales_line_key: "POS|T-1|1", product_code: PBI-POUR-16, product_name: "Pine Barrens IPA, 16 oz draft pour", channel: Taproom, state_code: MN, barrels: 0.0081, standard_cost_amount: null}
+        - {sales_line_key: "POS|T-1|2", product_code: MERCH-HAT, product_name: Pine Trucker Hat, channel: Taproom, state_code: MN, barrels: null, standard_cost_amount: null}
+
+  - name: int_depletions_mapped_keeps_unmapped_skus_visible
+    description: A mapped SKU gets an item and barrels; an unknown SKU keeps its row, flagged, with no barrels.
+    model: int_depletions_mapped
+    given:
+      - input: ref('int_depletions_unioned')
+        rows:
+          - {distributor_code: NORTHLAND, report_month: "2026-09-01", distributor_account_id: A1, account_name: COPPER KETTLE, distributor_sku: NB20004, quantity: 6, unit_type: KEG}
+          - {distributor_code: NORTHLAND, report_month: "2026-09-01", distributor_account_id: A1, account_name: COPPER KETTLE, distributor_sku: NB99999, quantity: 3, unit_type: KEG}
+      - input: ref('ref_distributor_sku_xref')
+        rows:
+          - {distributor_code: NORTHLAND, distributor_sku: NB20004, item_no: NSL-K50}
+      - input: ref('ref_distributor_account_xref')
+        rows:
+          - {distributor_code: NORTHLAND, distributor_account_id: A1, account_name: Copper Kettle Tavern, premise_type: ON_PREMISE, city: Minneapolis, state_code: MN}
+      - input: ref('stg_erp__item')
+        rows:
+          - {item_no: NSL-K50, brand_code: NSL, package_code: KEG-HALF}
+      - input: ref('ref_uom_conversion')
+        rows:
+          - {package_code: KEG-HALF, barrels: 0.5, case_equivalents: 6.8889}
+    expect:
+      rows:
+        - {distributor_sku: NB20004, account_name: Copper Kettle Tavern, item_no: NSL-K50, is_sku_mapped: 1, barrels: 3.0000}
+        - {distributor_sku: NB99999, account_name: Copper Kettle Tavern, item_no: null, is_sku_mapped: 0, barrels: null}
+
+  - name: int_batch_summary_computes_yield_and_cost_per_barrel
+    description: >
+      A packaged batch gets yield, loss and cost per packaged barrel from its runs and cost postings.
+      A batch still fermenting has no yield yet.
+    model: int_batch_summary
+    given:
+      - input: ref('stg_prod__batch')
+        rows:
+          - {batch_id: B1, brand_code: NSL, batch_status: PACKAGED, actual_volume_bbl: 50.00}
+          - {batch_id: B2, brand_code: PBI, batch_status: FERMENTING, actual_volume_bbl: 30.00}
+      - input: ref('stg_prod__packaging_run')
+        rows:
+          - {run_id: R1, batch_id: B1, units_packaged: 60, packaged_volume_bbl: 30.00}
+          - {run_id: R2, batch_id: B1, units_packaged: 200, packaged_volume_bbl: 18.00}
+      - input: ref('stg_prod__batch_cost')
+        rows:
+          - {batch_id: B1, cost_type: INGREDIENTS, cost_amount: 2400.00}
+          - {batch_id: B1, cost_type: LABOR, cost_amount: 900.00}
+          - {batch_id: B1, cost_type: OVERHEAD, cost_amount: 1200.00}
+          - {batch_id: B1, cost_type: PACKAGING_MATERIALS, cost_amount: 1680.00}
+    expect:
+      rows:
+        - {batch_id: B1, packaging_runs: 2, packaged_volume_bbl: 48.00, yield_pct: 0.9600, loss_bbl: 2.00, total_cost: 6180.00, cost_per_packaged_bbl: 128.75}
+        - {batch_id: B2, packaging_runs: 0, packaged_volume_bbl: 0, yield_pct: null, loss_bbl: null, total_cost: null, cost_per_packaged_bbl: null}
+
+  - name: int_order_price_vs_list_uses_tier_and_price_on_order_date
+    description: >
+      The customer moved from tier C to tier B on 2026-11-01, and the C price rose on 2026-11-02.
+      Each order is priced with the tier and list price in effect on its own order date,
+      not with today's values.
+    model: int_order_price_vs_list
+    given:
+      - input: ref('stg_erp__invoice_line')
+        rows:
+          - {invoice_no: INV-1, invoice_line_no: 10000, invoice_date: "2026-10-30", order_no: SO-1, customer_no: C-1, item_no: PBI-C16, is_credit: 0, quantity: 10, unit_price: 41.80, line_discount_pct: 10.0, line_amount: 376.20}
+          - {invoice_no: INV-2, invoice_line_no: 10000, invoice_date: "2026-11-04", order_no: SO-2, customer_no: C-1, item_no: PBI-C16, is_credit: 0, quantity: 10, unit_price: 39.60, line_discount_pct: 0.0, line_amount: 396.00}
+          - {invoice_no: CM-1, invoice_line_no: 10000, invoice_date: "2026-11-05", order_no: SO-1, customer_no: C-1, item_no: PBI-C16, is_credit: 1, quantity: -1, unit_price: 41.80, line_discount_pct: 0.0, line_amount: -41.80}
+      - input: ref('stg_erp__sales_header')
+        rows:
+          - {order_no: SO-1, order_date: "2026-10-28"}
+          - {order_no: SO-2, order_date: "2026-11-03"}
+      - input: ref('snap_erp_customer')
+        rows:
+          - {customer_no: C-1, price_tier: C, dbt_valid_from: "2024-07-05 10:00:00", dbt_valid_to: "2026-11-01 08:15:00"}
+          - {customer_no: C-1, price_tier: B, dbt_valid_from: "2026-11-01 08:15:00", dbt_valid_to: null}
+      - input: ref('stg_erp__price_list')
+        rows:
+          - {item_no: PBI-C16, price_tier: C, list_price: 41.80, starting_date: "2026-01-01", ending_date: "2026-11-01"}
+          - {item_no: PBI-C16, price_tier: C, list_price: 44.31, starting_date: "2026-11-02", ending_date: null}
+          - {item_no: PBI-C16, price_tier: B, list_price: 39.60, starting_date: "2026-01-01", ending_date: null}
+    expect:
+      rows:
+        - {invoice_no: INV-1, price_tier: C, list_price: 41.80, list_amount: 418.00, price_variance_amount: -41.80, price_realization_pct: 0.9000}
+        - {invoice_no: INV-2, price_tier: B, list_price: 39.60, list_amount: 396.00, price_variance_amount: 0.00, price_realization_pct: 1.0000}

@@ -1,0 +1,24 @@
+/// Sales channels and channel groups.
+table Channel
+	lineageTag: 135bca50-b1af-5fe4-9fe1-1c3c4cc684d5
+
+	/// Wholesale, Taproom, Direct - On premise, Direct - Off premise, Events.
+	column Channel
+		dataType: string
+		lineageTag: 97f98e08-5eea-55bc-8784-1101876fc576
+		summarizeBy: none
+		sourceColumn: channel
+
+	column 'Channel Group'
+		dataType: string
+		lineageTag: 55ec62cb-5e9e-52b8-a45c-7056be77662e
+		summarizeBy: none
+		sourceColumn: channel_group
+
+	partition Channel = entity
+		mode: directLake
+		source
+			entityName: dim_channel
+			schemaName: gold
+			expressionSource: 'DirectLake - wh_analytics'
+

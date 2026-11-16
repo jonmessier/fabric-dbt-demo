@@ -1,0 +1,107 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.5.0/schema.json",
+  "name": "132bd24499d231827aa4",
+  "position": {
+    "x": 848,
+    "y": 468,
+    "z": 500,
+    "width": 416,
+    "height": 236,
+    "tabOrder": 500
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Retail Account"
+                    }
+                  },
+                  "Property": "Account Name"
+                }
+              },
+              "queryRef": "Retail Account.Account Name",
+              "nativeQueryRef": "Account Name",
+              "displayName": "Account"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Retail Account"
+                    }
+                  },
+                  "Property": "Premise Type"
+                }
+              },
+              "queryRef": "Retail Account.Premise Type",
+              "nativeQueryRef": "Premise Type"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Depletions"
+                    }
+                  },
+                  "Property": "Depletion Barrels"
+                }
+              },
+              "queryRef": "Depletions.Depletion Barrels",
+              "nativeQueryRef": "Depletion Barrels"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Depletions"
+                  }
+                },
+                "Property": "Depletion Barrels"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": false
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Top retail accounts'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

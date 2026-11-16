@@ -1,0 +1,23 @@
+version: 2
+
+# Descriptions for the singular tests in this folder. They are logged to audit.dbt_run_log by the
+# on-run-end hook and shown on the Teams alert, so write them for the business: what is checked and
+# what a failure means.
+
+data_tests:
+  - name: assert_distributor_reports_not_late
+    description: >
+      Checks that every distributor has sent its depletion report for the latest month any distributor
+      has reported; a failure means a distributor's monthly file is late, so its sell-through for that
+      month is missing and the channel reports understate depletions until the file arrives.
+
+  - name: assert_excise_rate_for_every_sales_state
+    description: >
+      Checks that every state we sell into has an excise tax rate in ref_excise_tax_rate; a failure
+      means sales in that state carry no excise rate, so the excise tax we owe is understated.
+
+  - name: assert_no_unmapped_skus_in_gold
+    description: >
+      Checks that no distributor depletions reached gold without being mapped to one of our SKUs; a
+      failure means that volume sits on the UNMAPPED product, so brand and channel-inventory numbers in
+      the reports are understated until the codes are added to ref_distributor_sku_xref.

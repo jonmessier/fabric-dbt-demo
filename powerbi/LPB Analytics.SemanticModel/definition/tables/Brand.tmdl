@@ -1,0 +1,51 @@
+/// One row per brand (the liquid), plus MERCH and UNMAPPED members.
+table Brand
+	lineageTag: 58c0e11e-3bc9-533f-84d5-103ea9c19fbd
+
+	/// Brand; joins to dim_brand.
+	column 'Brand Code'
+		dataType: string
+		lineageTag: 1cf41fbe-5f6c-5225-af13-0b27d3144f4d
+		summarizeBy: none
+		sourceColumn: brand_code
+
+	column 'Brand Name'
+		dataType: string
+		lineageTag: 9bdc7df1-d3a6-5e32-82a1-b2aef4b8ed55
+		summarizeBy: none
+		sourceColumn: brand_name
+
+	column Style
+		dataType: string
+		lineageTag: 5e36ddb7-26a9-5ebc-b316-ea2296b0655c
+		summarizeBy: none
+		sourceColumn: style
+
+	column 'Product Category'
+		dataType: string
+		lineageTag: db30f39c-f04e-5620-947a-3dd94fa4ea45
+		summarizeBy: none
+		sourceColumn: product_category
+
+	column ABV
+		dataType: double
+		formatString: 0.0
+		lineageTag: f6037bed-e543-5e28-b6f4-2eb81fd648b4
+		summarizeBy: none
+		sourceColumn: abv
+
+	/// Average ERP standard cost per barrel across the brand's packages; used to cost taproom pours.
+	column 'Standard Cost per bbl'
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 0fbabb1c-02d2-5984-9823-5ed349fedbfe
+		summarizeBy: none
+		sourceColumn: standard_cost_per_bbl
+
+	partition Brand = entity
+		mode: directLake
+		source
+			entityName: dim_brand
+			schemaName: gold
+			expressionSource: 'DirectLake - wh_analytics'
+

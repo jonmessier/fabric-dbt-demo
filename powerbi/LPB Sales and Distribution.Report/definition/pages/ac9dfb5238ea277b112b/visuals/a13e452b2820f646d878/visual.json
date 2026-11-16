@@ -1,0 +1,38 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.5.0/schema.json",
+  "name": "a13e452b2820f646d878",
+  "position": {
+    "x": 16.0,
+    "y": 92,
+    "z": 100,
+    "width": 198.0,
+    "height": 96,
+    "tabOrder": 100
+  },
+  "visual": {
+    "visualType": "card",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Channel Inventory"
+                    }
+                  },
+                  "Property": "Sell-in Barrels"
+                }
+              },
+              "queryRef": "Channel Inventory.Sell-in Barrels",
+              "nativeQueryRef": "Sell-in Barrels"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

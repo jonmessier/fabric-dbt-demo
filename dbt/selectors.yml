@@ -1,0 +1,20 @@
+selectors:
+  - name: nightly
+    description: Everything the daily pipeline builds, in dependency order (seeds, snapshots, models, tests).
+    definition:
+      method: fqn
+      value: "*"
+
+  - name: reference_data
+    description: Business-owned seeds and everything downstream of them.
+    definition:
+      method: resource_type
+      value: seed
+      children: true
+
+  - name: gold
+    description: The star schema and everything it needs upstream.
+    definition:
+      method: tag
+      value: gold
+      parents: true

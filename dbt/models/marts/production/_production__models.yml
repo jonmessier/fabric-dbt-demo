@@ -1,0 +1,78 @@
+version: 2
+
+# Gold layer: contracts are enforced, so every column and its exact type is listed here.
+# Change the model and this file together, or the build fails.
+
+models:
+- name: fct_batch
+  description: One row per brew batch with volumes, yield and cost.
+  config:
+    contract:
+      enforced: true
+  columns:
+  - name: batch_id
+    data_type: varchar(20)
+    data_tests:
+    - unique
+    - not_null
+  - name: brand_code
+    data_type: varchar(10)
+    description: Brand; joins to dim_brand.
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_brand')
+          field: brand_code
+  - name: brew_date_key
+    data_type: int
+    description: Brew date as yyyymmdd; joins to dim_date.
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_date')
+          field: date_key
+  - name: package_date_key
+    data_type: int
+    description: Packaging date as yyyymmdd; null until packaged.
+  - name: brew_date
+    data_type: date
+  - name: package_date
+    data_type: date
+  - name: batch_status
+    data_type: varchar(20)
+  - name: recipe_version
+    data_type: varchar(10)
+  - name: tank_id
+    data_type: varchar(10)
+  - name: planned_volume_bbl
+    data_type: decimal(9,2)
+  - name: brewed_volume_bbl
+    data_type: decimal(9,2)
+  - name: packaged_volume_bbl
+    data_type: decimal(9,2)
+  - name: loss_bbl
+    data_type: decimal(9,2)
+    description: Brewed minus packaged barrels.
+  - name: yield_pct
+    data_type: decimal(9,4)
+    description: Packaged barrels / brewed barrels.
+    data_tests:
+    - between:
+        arguments:
+          min_value: 0
+          max_value: 1
+  - name: units_packaged
+    data_type: int
+  - name: ingredient_cost
+    data_type: decimal(18,2)
+  - name: labor_cost
+    data_type: decimal(18,2)
+  - name: overhead_cost
+    data_type: decimal(18,2)
+  - name: packaging_material_cost
+    data_type: decimal(18,2)
+  - name: total_cost
+    data_type: decimal(18,2)
+  - name: cost_per_packaged_bbl
+    data_type: decimal(18,2)
+    description: Total batch cost / packaged barrels.

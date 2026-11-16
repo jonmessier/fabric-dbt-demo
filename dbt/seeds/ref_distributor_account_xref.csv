@@ -1,0 +1,166 @@
+distributor_code,distributor_account_id,account_name,premise_type,city,state_code
+NORTHLAND,A0765736,Meadow Point Taphouse,ON_PREMISE,Duluth,MN
+NORTHLAND,A0401608,Harbor Canoe Pub,ON_PREMISE,Stillwater,MN
+NORTHLAND,A0668249,Granite Depot Market,OFF_PREMISE,Minneapolis,MN
+NORTHLAND,A0587952,Lakeside Orchard Liquor Barn,OFF_PREMISE,Eagan,MN
+NORTHLAND,A0459494,Driftwood Wharf Bottle Shop,OFF_PREMISE,Maple Grove,MN
+NORTHLAND,A0343900,Cedar Compass Pub,ON_PREMISE,Duluth,MN
+NORTHLAND,A0329560,Maple Barrel Bar & Grill,ON_PREMISE,St. Paul,MN
+NORTHLAND,A0554802,Iron Corner Bottle Shop,OFF_PREMISE,Bloomington,MN
+NORTHLAND,A0767918,Blue Heron Bridge Wine & Spirits,OFF_PREMISE,Rochester,MN
+NORTHLAND,A0470746,Meadow Oak Wine & Spirits,OFF_PREMISE,Maple Grove,MN
+NORTHLAND,A0665972,Iron Kettle Liquor Barn,OFF_PREMISE,St. Cloud,MN
+NORTHLAND,A0723984,Stone Depot Bottle Shop,OFF_PREMISE,Edina,MN
+NORTHLAND,A0471442,Silver Lantern Market,OFF_PREMISE,Stillwater,MN
+NORTHLAND,A0296564,Cedar Corner Pub,ON_PREMISE,Bloomington,MN
+NORTHLAND,A0859137,Summit Point Tavern,ON_PREMISE,Maple Grove,MN
+NORTHLAND,A0113212,Prairie Compass Liquor Barn,OFF_PREMISE,Mankato,MN
+NORTHLAND,A0675958,Foxtail Hollow Bowl,ON_PREMISE,Edina,MN
+NORTHLAND,A0495932,Maple Quarry Supper Club,ON_PREMISE,St. Cloud,MN
+NORTHLAND,A0169996,Summit Station Taphouse,ON_PREMISE,Stillwater,MN
+NORTHLAND,A0882851,Anchor Point Bar & Grill,ON_PREMISE,Minneapolis,MN
+NORTHLAND,A0267982,Birch Depot Pub,ON_PREMISE,Eagan,MN
+NORTHLAND,A0352192,North Star Depot Supper Club,ON_PREMISE,Mankato,MN
+NORTHLAND,A0635533,Juniper Corner Supper Club,ON_PREMISE,Minneapolis,MN
+NORTHLAND,A0114160,Granite Crossing Kitchen,ON_PREMISE,St. Paul,MN
+NORTHLAND,A0500081,Birch Hollow Bowl,ON_PREMISE,Rochester,MN
+NORTHLAND,A0367094,Timber Crossing Supper Club,ON_PREMISE,Minneapolis,MN
+NORTHLAND,A0878440,Copper Lantern Market,OFF_PREMISE,Rochester,MN
+NORTHLAND,A0901295,Anchor Compass Liquor Barn,OFF_PREMISE,St. Cloud,MN
+NORTHLAND,A0556591,Maple Crossing Taphouse,ON_PREMISE,Minnetonka,MN
+NORTHLAND,A0528438,Anchor Canoe Tavern,ON_PREMISE,Bloomington,MN
+NORTHLAND,A0745027,Red Pine Quarry Liquor Barn,OFF_PREMISE,Bloomington,MN
+NORTHLAND,A0284391,Old Mill Oak Beverage Depot,OFF_PREMISE,Woodbury,MN
+NORTHLAND,A0563196,Timber Depot Wine & Spirits,OFF_PREMISE,Minneapolis,MN
+NORTHLAND,A0233627,Timber Quarry Pub,ON_PREMISE,Duluth,MN
+NORTHLAND,A0614056,Red Pine Kettle Liquor,OFF_PREMISE,Maple Grove,MN
+NORTHLAND,A0402961,Granite Station Kitchen,ON_PREMISE,Minnetonka,MN
+NORTHLAND,A0978345,Red Pine Crossing Bottle Shop,OFF_PREMISE,St. Cloud,MN
+NORTHLAND,A0456338,Prairie Kettle Kitchen,ON_PREMISE,Minnetonka,MN
+NORTHLAND,A0358690,Meadow Barrel Liquor Barn,OFF_PREMISE,Minnetonka,MN
+NORTHLAND,A0787859,Copper Anvil Pub,ON_PREMISE,Minnetonka,MN
+NORTHLAND,A0432053,Old Mill Lantern Supper Club,ON_PREMISE,Minnetonka,MN
+NORTHLAND,A0582621,Maple Depot Tavern,ON_PREMISE,Duluth,MN
+NORTHLAND,A0542810,River Bridge Bar & Grill,ON_PREMISE,Maple Grove,MN
+NORTHLAND,A0524290,Lakeside Point Pub,ON_PREMISE,Minnetonka,MN
+NORTHLAND,A0443355,Sunset Landing Kitchen,ON_PREMISE,Duluth,MN
+NORTHLAND,A0787804,Lakeside Landing Liquor Barn,OFF_PREMISE,St. Cloud,MN
+NORTHLAND,A0455417,Summit Wharf Bar & Grill,ON_PREMISE,Maple Grove,MN
+NORTHLAND,A0754510,Red Pine Corner Wine & Spirits,OFF_PREMISE,Duluth,MN
+NORTHLAND,A0343515,Blue Heron Lantern Liquor Barn,OFF_PREMISE,Minnetonka,MN
+NORTHLAND,A0209914,North Star Corner Tavern,ON_PREMISE,Maple Grove,MN
+NORTHLAND,A0707597,North Star Bridge Bar & Grill,ON_PREMISE,Woodbury,MN
+NORTHLAND,A0713343,Old Mill Bridge Kitchen,ON_PREMISE,Stillwater,MN
+NORTHLAND,A0320936,Sunset Kettle Kitchen,ON_PREMISE,St. Paul,MN
+NORTHLAND,A0601554,Birch Station Liquor,OFF_PREMISE,Rochester,MN
+NORTHLAND,A0373020,Maple Canoe Supper Club,ON_PREMISE,Roseville,MN
+BADGER,WI-10004,North Star Hollow Beverage Depot,OFF_PREMISE,La Crosse,WI
+BADGER,WI-10012,Cedar Corner Bowl,ON_PREMISE,Madison,WI
+BADGER,WI-10015,Whistle Station Liquor,OFF_PREMISE,Green Bay,WI
+BADGER,WI-10022,Stone Compass Pub,ON_PREMISE,Hudson,WI
+BADGER,WI-10029,Summit Wharf Beverage Depot,OFF_PREMISE,Green Bay,WI
+BADGER,WI-10041,Lakeside Canoe Liquor,OFF_PREMISE,Superior,WI
+BADGER,WI-10044,Silver Hollow Taphouse,ON_PREMISE,Superior,WI
+BADGER,WI-10049,Harbor Quarry Market,OFF_PREMISE,Hudson,WI
+BADGER,WI-10058,North Star Landing Liquor,OFF_PREMISE,Madison,WI
+BADGER,WI-10067,Prairie Orchard Taphouse,ON_PREMISE,Menomonie,WI
+BADGER,WI-10073,Foxtail Station Taphouse,ON_PREMISE,Superior,WI
+BADGER,WI-10081,Maple Barrel Bowl,ON_PREMISE,Wausau,WI
+BADGER,WI-10086,Driftwood Depot Bottle Shop,OFF_PREMISE,Menomonie,WI
+BADGER,WI-10094,Maple Kettle Pizza Co.,ON_PREMISE,Eau Claire,WI
+BADGER,WI-10098,Old Mill Wharf Bar & Grill,ON_PREMISE,Green Bay,WI
+BADGER,WI-10108,Iron Canoe Beverage Depot,OFF_PREMISE,Hudson,WI
+BADGER,WI-10112,River Station Bottle Shop,OFF_PREMISE,Hudson,WI
+BADGER,WI-10121,Silver Oak Taphouse,ON_PREMISE,Madison,WI
+BADGER,WI-10129,River Point Wine & Spirits,OFF_PREMISE,Eau Claire,WI
+BADGER,WI-10135,Anchor Lantern Taphouse,ON_PREMISE,Menomonie,WI
+BADGER,WI-10143,Driftwood Depot Wine & Spirits,OFF_PREMISE,La Crosse,WI
+BADGER,WI-10153,Whistle Kettle Liquor Barn,OFF_PREMISE,La Crosse,WI
+BADGER,WI-10155,North Star Bridge Pub,ON_PREMISE,Green Bay,WI
+BADGER,WI-10165,River Crossing Bar & Grill,ON_PREMISE,Eau Claire,WI
+BADGER,WI-10169,Foxtail Kettle Market,OFF_PREMISE,Superior,WI
+BADGER,WI-10176,Summit Kettle Liquor Barn,OFF_PREMISE,Superior,WI
+BADGER,WI-10185,Golden Hollow Bar & Grill,ON_PREMISE,Hudson,WI
+BADGER,WI-10194,Juniper Anvil Supper Club,ON_PREMISE,Menomonie,WI
+BADGER,WI-10202,Harbor Hollow Supper Club,ON_PREMISE,Superior,WI
+BADGER,WI-10207,Prairie Landing Market,OFF_PREMISE,Madison,WI
+BADGER,WI-10212,Maple Landing Beverage Depot,OFF_PREMISE,Eau Claire,WI
+BADGER,WI-10217,Prairie Hollow Taphouse,ON_PREMISE,Hudson,WI
+BADGER,WI-10225,Harbor Oak Wine & Spirits,OFF_PREMISE,Eau Claire,WI
+BADGER,WI-10233,Blue Heron Anvil Supper Club,ON_PREMISE,Eau Claire,WI
+BADGER,WI-10242,Red Pine Crossing Bar & Grill,ON_PREMISE,Superior,WI
+BADGER,WI-10246,Stone Bridge Bowl,ON_PREMISE,Wausau,WI
+BADGER,WI-10253,Lakeside Orchard Beverage Depot,OFF_PREMISE,La Crosse,WI
+BADGER,WI-10262,Iron Crossing Liquor,OFF_PREMISE,Superior,WI
+BADGER,WI-10271,Harbor Hollow Liquor Barn,OFF_PREMISE,La Crosse,WI
+BADGER,WI-10273,Juniper Lantern Tavern,ON_PREMISE,Hudson,WI
+BADGER,WI-10282,Granite Barrel Wine & Spirits,OFF_PREMISE,La Crosse,WI
+BADGER,WI-10289,Maple Quarry Bottle Shop,OFF_PREMISE,Menomonie,WI
+BADGER,WI-10296,Juniper Depot Liquor Barn,OFF_PREMISE,Wausau,WI
+BADGER,WI-10304,Maple Crossing Liquor,OFF_PREMISE,Hudson,WI
+BADGER,WI-10311,Silver Corner Pizza Co.,ON_PREMISE,Superior,WI
+BADGER,WI-10319,Iron Crossing Bar & Grill,ON_PREMISE,Menomonie,WI
+BADGER,WI-10323,Driftwood Hollow Beverage Depot,OFF_PREMISE,Menomonie,WI
+BADGER,WI-10330,Maple Bridge Bowl,ON_PREMISE,La Crosse,WI
+BADGER,WI-10340,Golden Barrel Kitchen,ON_PREMISE,Wausau,WI
+BADGER,WI-10348,Juniper Corner Pub,ON_PREMISE,Wausau,WI
+BADGER,WI-10354,Old Mill Kettle Pizza Co.,ON_PREMISE,La Crosse,WI
+BADGER,WI-10363,Blue Heron Barrel Pub,ON_PREMISE,Menomonie,WI
+BADGER,WI-10367,Sunset Station Wine & Spirits,OFF_PREMISE,Hudson,WI
+BADGER,WI-10375,Sunset Crossing Bottle Shop,OFF_PREMISE,Eau Claire,WI
+BADGER,WI-10383,Summit Canoe Beverage Depot,OFF_PREMISE,Menomonie,WI
+HAWKEYE,30003,Birch Oak Wine & Spirits,OFF_PREMISE,Dubuque,IA
+HAWKEYE,30011,Harbor Landing Kitchen,ON_PREMISE,Dubuque,IA
+HAWKEYE,30023,Lakeside Crossing Taphouse,ON_PREMISE,Dubuque,IA
+HAWKEYE,30041,Foxtail Quarry Kitchen,ON_PREMISE,Des Moines,IA
+HAWKEYE,30050,Driftwood Station Wine & Spirits,OFF_PREMISE,Iowa City,IA
+HAWKEYE,30059,Old Mill Anvil Tavern,ON_PREMISE,Mason City,IA
+HAWKEYE,30069,Juniper Orchard Market,OFF_PREMISE,Iowa City,IA
+HAWKEYE,30079,Silver Point Bottle Shop,OFF_PREMISE,Iowa City,IA
+HAWKEYE,30088,Meadow Kettle Bottle Shop,OFF_PREMISE,Dubuque,IA
+HAWKEYE,30102,Sunset Anvil Bowl,ON_PREMISE,Decorah,IA
+HAWKEYE,30113,Granite Depot Supper Club,ON_PREMISE,Des Moines,IA
+HAWKEYE,30126,Old Mill Crossing Taphouse,ON_PREMISE,Mason City,IA
+HAWKEYE,30138,Golden Lantern Liquor Barn,OFF_PREMISE,Ames,IA
+HAWKEYE,30145,Whistle Landing Market,OFF_PREMISE,Cedar Rapids,IA
+HAWKEYE,30155,Blue Heron Barrel Bottle Shop,OFF_PREMISE,Des Moines,IA
+HAWKEYE,30174,Whistle Point Kitchen,ON_PREMISE,Des Moines,IA
+HAWKEYE,30180,Lakeside Landing Liquor,OFF_PREMISE,Des Moines,IA
+HAWKEYE,30189,Red Pine Point Wine & Spirits,OFF_PREMISE,Dubuque,IA
+HAWKEYE,30203,Foxtail Bridge Supper Club,ON_PREMISE,Iowa City,IA
+HAWKEYE,30211,Golden Crossing Bowl,ON_PREMISE,Des Moines,IA
+HAWKEYE,30223,Harbor Landing Pizza Co.,ON_PREMISE,Cedar Rapids,IA
+HAWKEYE,30234,Blue Heron Compass Liquor Barn,OFF_PREMISE,Ames,IA
+HAWKEYE,30248,Anchor Hollow Pizza Co.,ON_PREMISE,Ames,IA
+HAWKEYE,30258,Timber Corner Liquor Barn,OFF_PREMISE,Ames,IA
+HAWKEYE,30273,Iron Oak Beverage Depot,OFF_PREMISE,Ames,IA
+HAWKEYE,30282,Iron Depot Wine & Spirits,OFF_PREMISE,Decorah,IA
+HAWKEYE,30295,Silver Anvil Bowl,ON_PREMISE,Mason City,IA
+HAWKEYE,30303,Driftwood Barrel Wine & Spirits,OFF_PREMISE,Dubuque,IA
+HAWKEYE,30312,Lakeside Wharf Liquor Barn,OFF_PREMISE,Decorah,IA
+HAWKEYE,30324,North Star Hollow Tavern,ON_PREMISE,Des Moines,IA
+HAWKEYE,30339,Golden Hollow Liquor Barn,OFF_PREMISE,Ames,IA
+HAWKEYE,30345,North Star Barrel Pizza Co.,ON_PREMISE,Mason City,IA
+HAWKEYE,30354,Anchor Lantern Kitchen,ON_PREMISE,Cedar Rapids,IA
+HAWKEYE,30367,Old Mill Canoe Bottle Shop,OFF_PREMISE,Iowa City,IA
+HAWKEYE,30377,Granite Canoe Market,OFF_PREMISE,Iowa City,IA
+HAWKEYE,30393,North Star Compass Beverage Depot,OFF_PREMISE,Ames,IA
+HAWKEYE,30401,Summit Orchard Liquor,OFF_PREMISE,Cedar Rapids,IA
+HAWKEYE,30410,Cedar Bridge Wine & Spirits,OFF_PREMISE,Iowa City,IA
+HAWKEYE,30420,River Bridge Liquor Barn,OFF_PREMISE,Cedar Rapids,IA
+HAWKEYE,30429,Red Pine Anvil Bottle Shop,OFF_PREMISE,Iowa City,IA
+HAWKEYE,30445,Sunset Kettle Beverage Depot,OFF_PREMISE,Dubuque,IA
+HAWKEYE,30459,Iron Lantern Beverage Depot,OFF_PREMISE,Decorah,IA
+HAWKEYE,30462,Meadow Orchard Beverage Depot,OFF_PREMISE,Des Moines,IA
+HAWKEYE,30475,River Hollow Pizza Co.,ON_PREMISE,Ames,IA
+HAWKEYE,30489,Old Mill Crossing Pizza Co.,ON_PREMISE,Decorah,IA
+HAWKEYE,30504,Juniper Corner Bowl,ON_PREMISE,Cedar Rapids,IA
+HAWKEYE,30512,North Star Wharf Bottle Shop,OFF_PREMISE,Cedar Rapids,IA
+HAWKEYE,30520,Cedar Corner Kitchen,ON_PREMISE,Ames,IA
+HAWKEYE,30536,Old Mill Hollow Liquor,OFF_PREMISE,Cedar Rapids,IA
+HAWKEYE,30545,Blue Heron Wharf Liquor Barn,OFF_PREMISE,Mason City,IA
+HAWKEYE,30558,Silver Quarry Liquor,OFF_PREMISE,Des Moines,IA
+HAWKEYE,30570,Whistle Hollow Supper Club,ON_PREMISE,Mason City,IA
+HAWKEYE,30574,Juniper Compass Wine & Spirits,OFF_PREMISE,Cedar Rapids,IA
+HAWKEYE,30592,Juniper Oak Beverage Depot,OFF_PREMISE,Ames,IA
+HAWKEYE,30599,Prairie Barrel Liquor Barn,OFF_PREMISE,Decorah,IA

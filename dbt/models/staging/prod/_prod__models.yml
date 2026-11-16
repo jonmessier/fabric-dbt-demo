@@ -1,0 +1,69 @@
+version: 2
+
+models:
+  - name: stg_prod__batch
+    description: Latest version of each brew batch. One row per batch.
+    columns:
+      - name: batch_id
+        data_tests: [unique, not_null]
+      - name: batch_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [FERMENTING, PACKAGED]
+      - name: actual_volume_bbl
+        description: Barrels of wort that went into the fermenter.
+        data_tests: [not_null, non_negative]
+
+  - name: stg_prod__ingredient_usage
+    description: Ingredients consumed per batch. One row per batch and ingredient.
+    columns:
+      - name: batch_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_prod__batch')
+                field: batch_id
+
+  - name: stg_prod__packaging_run
+    description: Packaging runs. One row per run (a batch packaged into one item).
+    columns:
+      - name: run_id
+        data_tests: [unique, not_null]
+      - name: batch_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_prod__batch')
+                field: batch_id
+      - name: item_no
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_erp__item')
+                field: item_no
+      - name: units_packaged
+        data_tests: [non_negative]
+
+  - name: stg_prod__batch_cost
+    description: Cost postings per batch. One row per batch and cost type.
+    columns:
+      - name: cost_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [INGREDIENTS, LABOR, OVERHEAD, PACKAGING_MATERIALS]
+
+unit_tests:
+  - name: stg_prod__batch_keeps_packaged_version
+    description: A batch arrives when brewed and again when packaged; the packaged version wins.
+    model: stg_prod__batch
+    given:
+      - input: source('prod', 'prod_batch')
+        rows:
+          - {batch_id: B1, brand_code: NSL, status: FERMENTING, package_date: null, actual_volume_bbl: 57.5, updated_at: "2026-10-01 07:00:00", _ingested_at: "2026-10-02 02:00:00"}
+          - {batch_id: B1, brand_code: NSL, status: PACKAGED, package_date: "2026-10-30", actual_volume_bbl: 57.5, updated_at: "2026-10-30 11:00:00", _ingested_at: "2026-10-31 02:00:00"}
+    expect:
+      rows:
+        - {batch_id: B1, batch_status: PACKAGED, package_date: "2026-10-30"}
