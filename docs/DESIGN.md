@@ -1,7 +1,7 @@
 # Fabric + dbt Demo — Design (v0.5)
 
 **Status:** spike done (except CI/CD items); Dev workspace provisioned, bronze loaded and the full dbt build running in Fabric, locally and as the dbt job · **Owner:** Jon Messier · **Last updated:** 2026-11-14
-**Repo:** local only for now: `C:\Dev\dbt-tutorial` (Windows, Python 3.11, PowerShell). No GitHub remote in use until one is chosen.
+**Repo:** `C:\Dev\dbt-tutorial` (Windows, Python 3.11, PowerShell), pushed to the private GitHub repo `jonmessier/fabric-dbt-demo` (remote `personal`) since 2026-11-16. Fabric Git sync and GitHub Actions are not set up yet.
 **Guiding principle:** build it the way a real client would run it: real-looking source systems, daily loads, history tracking, data contracts, CI/CD, dev/test/prod. The dbt features are the stars, but each one shows up because the business needs it, not as a toy example.
 
 Changes from v0.4.1 (spike results, `docs/SPIKE.md`): pinned to the dbt job runtime (dbt-core 1.11, dbt-fabric 1.10.0, which needs ODBC Driver 18); the dbt job is built from `dbt/` and published by `scripts/dbt_job.py`, not from the git-synced `fabric/` folder ([ADR 0001](decisions/0001-dbt-job-built-from-dbt-folder.md)); the job builds everything because it ignores `selector`; `dbt source freshness` can't run as a job operation; the pipeline refreshes the lakehouse SQL endpoint before dbt; `drop_dbt_tmp_relations` cleans up dbt-fabric's temp objects.
@@ -304,7 +304,7 @@ Results and evidence are in `docs/SPIKE.md`; the outcome is in brackets.
 | # | Decision | Status |
 |---|---|---|
 | 1 | Domain | **Decided:** Larkspur & Pine Brewing Co. (fictional craft beverage manufacturer) |
-| 2 | Git host | **Decided for now:** local repo only. GitHub (or Azure DevOps) later; that unlocks Fabric Git sync and CI |
+| 2 | Git host | **Decided 2026-11-16:** private GitHub repo `jonmessier/fabric-dbt-demo`. That unlocks Fabric Git sync and CI; neither is set up yet, and the OIDC subject in the identity section still names the old template repo |
 | 3 | OS / shell | **Decided:** Windows / PowerShell (`tasks.ps1`) |
 | 4 | Silver engine | **Decided (v1):** Warehouse (dbt-fabric); Spark silver as optional Act 2 |
 | 5 | Environments | **Decided:** Dev/Test/Prod, build Dev first |
