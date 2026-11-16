@@ -4,14 +4,15 @@ with source as (
 
 ),
 
--- bronze is append-only, so the same key can arrive more than once; keep the newest version
+-- bronze is append-only, so the same key can arrive more than once (a corrected run is re-sent with the
+-- same run_id); keep the newest version: latest recorded_at, then latest load
 ranked as (
 
     select
         *,
         row_number() over (
             partition by run_id
-            order by _ingested_at desc
+            order by cast(recorded_at as datetime2(6)) desc, _ingested_at desc
         ) as _row_rank
     from source
 

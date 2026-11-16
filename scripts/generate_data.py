@@ -15,7 +15,8 @@ Usage:
 
 `backfill` writes ~18 months of history as a full extract dated the business date.
 `advance` writes the next business day's incremental files (and any scheduled
-surprises: a customer move, a price change, a re-sent POS file, a late distributor file).
+surprises: a customer move, a price change, a re-sent POS file, a late distributor file, and on the
+first day the corrected packaging run that clears the act 1 yield error).
 
 Everything is deterministic for a given --seed: every day's activity comes from a
 random stream keyed on (seed, system, date), so `advance` reproduces exactly what
@@ -507,6 +508,16 @@ class World:
                                  "line": "KEG-LINE" if self.items[item_no]["base_uom"] == "KEG" else "CAN-LINE",
                                  "units_packaged": units, "volume_bbl": round(units * gal / GAL_PER_BBL, 2),
                                  "operator": r.choice(PEOPLE), "recorded_at": ts(pkg_date, r, 6, 15), "_d": pkg_date})
+                    if make_bad and k == 1:
+                        # Act 2: the brewery spots the keying error and re-sends the run, corrected, in the
+                        # next day's production feed (same run_id, later recorded_at). Staging keeps the newest
+                        # version, so the yield error clears once it is loaded. No random draws here, so the
+                        # rest of the generated data is unchanged.
+                        fix_day = self.bf + timedelta(days=1)
+                        good_units = int(out_bbl * share / sum(shares) * GAL_PER_BBL / gal)
+                        runs.append({**runs[-1], "units_packaged": good_units,
+                                     "volume_bbl": round(good_units * gal / GAL_PER_BBL, 2),
+                                     "recorded_at": f"{fix_day.isoformat()} 09:12:00", "_d": fix_day})
                 bad_done = bad_done or make_bad
                 for ctype, amount in (("INGREDIENTS", ing_total), ("LABOR", planned * r.uniform(14, 20)),
                                       ("OVERHEAD", planned * r.uniform(22, 30)),

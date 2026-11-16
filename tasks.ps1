@@ -33,7 +33,10 @@ param(
     [switch]$Yes,
     [switch]$WriteSeeds,
     [switch]$Force,
-    [switch]$Export
+    [switch]$Export,
+    [string]$Select,
+    [ValidateSet('status', 'skus', 'excise', 'undo')]
+    [string]$Fix = 'status'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -128,9 +131,12 @@ try {
     seed           dbt seed
     build          dbt build --selector nightly
                    (-FirstBuild = into an empty warehouse: unit tests after the models)
+                   (-Select "ref_excise_tax_rate+" = build only that path, e.g. "source:prod+")
     unit           dbt test -s test_type:unit
     freshness      dbt source freshness
     docs           dbt docs generate, then serve
+    demo-fix       Act 2: fix a planted reference-data problem in dbt\seeds and print the path to rebuild
+                   (-Fix skus | excise | undo | status)
     lineage        Build docs\lineage\dbt_lineage.html from the manifest and latest results, and open it
                    (dbt parse first if there is no manifest)
 
@@ -185,7 +191,10 @@ try {
         'debug'     { Invoke-Dbt @('debug') }
         'seed'      { Invoke-Dbt @('seed') }
         'build' {
-            if ($FirstBuild) {
+            if ($Select) {
+                # One path only, e.g. a seed and everything downstream of it ("ref_excise_tax_rate+").
+                Invoke-Dbt (@('build', '-s') + ($Select -split '\s+')) -AllowTestFailures
+            } elseif ($FirstBuild) {
                 # Empty warehouse (new environment, or after reset): the fct_sales_line unit test reads
                 # {{ this }}, which doesn't exist yet. Build everything without unit tests, then run them.
                 # No --selector here: dbt ignores --exclude when --selector is given (nightly = everything).
@@ -203,6 +212,9 @@ try {
         'docs' {
             Invoke-Dbt @('docs', 'generate')
             Invoke-Dbt @('docs', 'serve')
+        }
+        'demo-fix' {
+            Invoke-Script 'demo_fix.py' @($Fix)
         }
         'lineage' {
             if (-not (Test-Path 'dbt\target\manifest.json')) { Invoke-Dbt @('parse') }
@@ -247,15 +259,18 @@ try {
             if (-not $Yes) {
                 Write-Host @"
 reset puts $Environment back to the demo's starting state ("act 1"). It
-  1. regenerates data\landing (backfill only, with the planted defects),
+  1. takes the act 2 seed fixes out again (demo-fix -Fix undo) and regenerates data\landing
+     (backfill only, with the planted defects),
   2. replaces lh_bronze Files/landing and reloads every bronze table (scripts\reset_demo.py),
   3. drops every table and view in ref, silver, snapshots, gold and audit,
-  4. rebuilds with dbt, unit tests last (dev only).
+  4. republishes the dbt job dbt_lpb, so the pipeline also builds the act 1 seeds,
+  5. rebuilds with dbt, unit tests last (dev only).
 Run again with -Yes to do it.
 "@ -ForegroundColor Yellow
                 exit 1
             }
             if ($Environment -eq 'prod') { throw 'reset refuses prod. Run scripts\reset_demo.py --allow-prod deliberately.' }
+            Invoke-Script 'demo_fix.py' @('undo')
             $dirty = git status --porcelain -- dbt
             if ($dirty) {
                 Write-Host 'Note: dbt\ has uncommitted changes (demo edits?). Restore them with git restore <file>:' -ForegroundColor Yellow
@@ -264,6 +279,8 @@ Run again with -Yes to do it.
             & (Get-Python) 'scripts\generate_data.py' 'backfill' '--force'
             Assert-LastExit 'generate_data backfill'
             Invoke-Script 'reset_demo.py' @('--env', $Environment, '--confirm')
+            # The dbt job carries its own copy of dbt\ (seeds included): put it back to act 1 as well.
+            Invoke-Script 'dbt_job.py' @('--env', $Environment)
             if ($Environment -eq 'dev') {
                 Invoke-Dbt @('build', '--exclude', 'test_type:unit') -AllowTestFailures
                 Invoke-Dbt @('test', '-s', 'test_type:unit')

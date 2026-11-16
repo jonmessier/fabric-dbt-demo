@@ -32,6 +32,7 @@ Use `.\tasks.ps1` as the entry point (`.\tasks.ps1 help` lists everything; tasks
 | Deploy / run the daily pipeline | `.\tasks.ps1 pipeline -Env dev` (`-Run` uploads new landing files and runs it; includes the Teams alert `nb_dbt_alert`) |
 | Deploy the semantic model and report | `.\tasks.ps1 powerbi -Env dev` (`-Export` pulls the report edited in Fabric back into `powerbi/`) |
 | Lineage page | `.\tasks.ps1 lineage` (writes and opens `docs/lineage/dbt_lineage.html`) |
+| Demo act 2 (fix the planted problems) | `.\tasks.ps1 demo-fix -Fix skus` (or `excise`, `undo`, `status`), then `.\tasks.ps1 build -Select "<seed>+"`; run sheet in `docs/DEMO_SCRIPT.md` |
 | First build into an empty warehouse | `.\tasks.ps1 build -FirstBuild` (unit tests after the models) |
 | Freshness | `dbt source freshness` |
 | Unit tests only | `dbt test -s test_type:unit` |
