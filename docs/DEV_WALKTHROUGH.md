@@ -245,7 +245,11 @@ node is about, straight from dbt's own metadata: the model a test is on (`parent
 the kind of test (`not_null`, `relationships`, `between`, `singular`, `unit`), its severity, the file it is
 declared in, and its description. `nb_dbt_alert` turns the newest run into the card. Each problem gets three
 lines: what failed (`stg_erp__customer.state_text · relationships · 1 row`), what the test checks (its
-`description:` in YAML, or dbt's message if it has none), and `declared in … · severity …`. The description
+`description:` in YAML, or dbt's message if it has none), and `declared in … · severity …`. Errors also say
+where to look, in two lines to paste into a query: `Bad rows: select * from audit.<test>` (the failing rows
+that `store_failures` saved; for the yield error that is the whole 138% batch, B260826-2) and
+`Model: silver.int_batch_summary` (the table the test is on, for context). Warnings leave those out to keep
+the card short; their audit tables are in the console output and in `audit.dbt_run_log`. The description
 is written for the business, so it belongs next to the test: generic tests take `description:` next to
 `arguments:`, singular tests are described in `tests/singular/_singular__tests.yml`.
 

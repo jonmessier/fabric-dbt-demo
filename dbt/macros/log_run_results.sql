@@ -12,6 +12,8 @@
       severity      the test's severity (warn / error), lower case
       declared_in   the file the node is declared in, with forward slashes
       description   the node's description (cut to 400 characters), null if empty
+      failures_relation  where store_failures saved a test's failing rows ([db].[audit].[test_name])
+      parent_relation    the table or view of parent_model ([db].[silver].[int_batch_summary])
 
     Called from on-run-end in dbt_project.yml. Rows are inserted in chunks of 500 because a single
     INSERT ... VALUES takes at most 1000 rows in T-SQL.
@@ -34,6 +36,8 @@
         ('severity', 'varchar(10)'),
         ('declared_in', 'varchar(400)'),
         ('description', 'varchar(500)'),
+        ('failures_relation', 'varchar(400)'),
+        ('parent_relation', 'varchar(400)'),
     ] -%}
 
     {%- set ddl -%}
@@ -73,7 +77,8 @@
             ~ sql_string(run_started_at.strftime('%Y-%m-%d %H:%M:%S')) ~ ", "
             ~ sql_string(info.parent_model) ~ ", " ~ sql_string(info.column_name) ~ ", "
             ~ sql_string(info.test_kind) ~ ", " ~ sql_string(info.severity) ~ ", "
-            ~ sql_string(info.declared_in, 400) ~ ", " ~ sql_string(info.description, 400) ~ ")"
+            ~ sql_string(info.declared_in, 400) ~ ", " ~ sql_string(info.description, 400) ~ ", "
+            ~ sql_string(info.failures_relation, 400) ~ ", " ~ sql_string(info.parent_relation, 400) ~ ")"
         ) -%}
     {%- endfor %}
 
@@ -81,7 +86,8 @@
     insert into {{ table }} (
         invocation_id, target_name, unique_id, resource_type, node_name, status, failures, message,
         execution_time_seconds, run_started_at,
-        parent_model, column_name, test_kind, severity, declared_in, description
+        parent_model, column_name, test_kind, severity, declared_in, description,
+        failures_relation, parent_relation
     )
     values
         {{ batch | join(',\n        ') }};
@@ -92,21 +98,23 @@
 {#
     What a node is about, for audit.dbt_run_log. Reads the node as a dict, because the node classes
     differ: generic tests have test_metadata, attached_node and column_name; singular tests have none
-    of them; unit tests have tested_node_unique_id and no severity.
+    of them; unit tests have tested_node_unique_id and no severity. The parent's table comes from the
+    graph (the manifest), which every macro can read.
 #}
 {% macro node_test_info(node) %}
     {%- set d = node.to_dict() -%}
     {%- set resource_type = d.get('resource_type') -%}
     {%- set config = d.get('config') or {} -%}
-    {%- set info = {'parent_model': none, 'column_name': none, 'test_kind': none, 'severity': none} -%}
+    {%- set info = {'parent_model': none, 'column_name': none, 'test_kind': none, 'severity': none,
+                    'failures_relation': none, 'parent_relation': none} -%}
+    {%- set parent = {'id': none} -%}
 
     {%- if resource_type == 'test' -%}
         {%- set metadata = d.get('test_metadata') or {} -%}
         {%- if metadata.get('name') -%}
             {#- generic test: declared in YAML on a model/seed/snapshot (or a source) -#}
-            {%- do info.update({'test_kind': metadata.get('name'),
-                                'parent_model': short_node_name(d.get('attached_node')),
-                                'column_name': d.get('column_name')}) -%}
+            {%- do parent.update({'id': d.get('attached_node')}) -%}
+            {%- do info.update({'test_kind': metadata.get('name'), 'column_name': d.get('column_name')}) -%}
         {%- else -%}
             {#- singular test: the last model, seed or snapshot it refs -#}
             {%- set parents = [] -%}
@@ -115,13 +123,21 @@
                     {%- do parents.append(unique_id) -%}
                 {%- endif -%}
             {%- endfor -%}
-            {%- do info.update({'test_kind': 'singular',
-                                'parent_model': short_node_name(parents[-1] if parents else none)}) -%}
+            {%- do parent.update({'id': parents[-1] if parents else none}) -%}
+            {%- do info.update({'test_kind': 'singular'}) -%}
         {%- endif -%}
-        {%- do info.update({'severity': (config.get('severity') or '') | lower or none}) -%}
+        {#- With store_failures, a test's relation_name is the audit table holding its failing rows. -#}
+        {%- do info.update({'severity': (config.get('severity') or '') | lower or none,
+                            'failures_relation': d.get('relation_name')}) -%}
     {%- elif resource_type == 'unit_test' -%}
-        {%- do info.update({'test_kind': 'unit',
-                            'parent_model': short_node_name(d.get('tested_node_unique_id'))}) -%}
+        {%- do parent.update({'id': d.get('tested_node_unique_id')}) -%}
+        {%- do info.update({'test_kind': 'unit'}) -%}
+    {%- endif -%}
+
+    {%- if parent.id -%}
+        {%- set parent_node = graph.nodes.get(parent.id) or graph.sources.get(parent.id) or {} -%}
+        {%- do info.update({'parent_model': short_node_name(parent.id),
+                            'parent_relation': parent_node.get('relation_name')}) -%}
     {%- endif -%}
 
     {%- set description = (d.get('description') or '') | trim -%}

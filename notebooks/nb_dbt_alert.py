@@ -33,7 +33,8 @@
 # * the counts, when the run started and how long it took
 # * the errors and warnings, each with what failed (`stg_erp__customer.state_text · relationships · 1 row`),
 #   what the test checks (its dbt description; dbt's own message if it has none) and where it is declared
-#   with its severity. The hook logs those details with every result.
+#   with its severity. Errors also say where to look: the table holding the failing rows
+#   (`select * from audit.<test>`) and the model's table. The hook logs those details with every result.
 # * a button that opens the workspace in Fabric.
 #
 # **Where the Teams address comes from:** a Teams *Workflows* webhook (Teams > channel > ... > Workflows >
@@ -164,10 +165,11 @@ with sql_connection() as conn:
     invocation_id, target_name, run_started_at = latest
 
     # The columns that say what a test is about (parent_model, column_name, test_kind, severity,
-    # declared_in, description) were added to the table later; log_run_results adds them on its next run.
-    # Until then, and for rows written before that, they read as null and the card falls back to dbt's
-    # node name and message.
-    DETAIL_COLUMNS = ["parent_model", "column_name", "test_kind", "severity", "declared_in", "description"]
+    # declared_in, description) and where to look (failures_relation, parent_relation) were added to the
+    # table later; log_run_results adds them on its next run. Until then, and for rows written before
+    # that, they read as null and the card falls back to dbt's node name and message.
+    DETAIL_COLUMNS = ["parent_model", "column_name", "test_kind", "severity", "declared_in", "description",
+                      "failures_relation", "parent_relation"]
     cur.execute("select name from sys.columns where object_id = object_id('audit.dbt_run_log')")
     present = {r[0] for r in cur.fetchall()}
     details = ", ".join(c if c in present else f"cast(null as varchar(10)) as {c}" for c in DETAIL_COLUMNS)
@@ -274,11 +276,23 @@ def issue_title(r):
     return f"{target} · {readable}"
 
 
-def issue_lines(issues, color):
+def short_relation(relation):
+    """'[wh_analytics].[audit].[between_...]' -> 'audit.between_...': the warehouse is always the same,
+    so schema.table is enough to paste into a query in wh_analytics."""
+    if not relation:
+        return None
+    parts = [p.strip("[]\"") for p in relation.split(".")]
+    return ".".join(parts[-2:])
+
+
+def issue_lines(issues, color, where_to_look=False):
     """One small block per problem:
          line 1 (bold, colored): what failed, and how many rows
          line 2 (small):         what the test checks (its description), or dbt's message if it has none
-         line 3 (small, subtle): where the test is declared and its severity
+         with where_to_look (errors only, so warnings stay short), in monospace to copy into a query:
+           "Bad rows: select * from audit.<test>"  the failing rows dbt saved (store_failures)
+           "Model:    silver.<model>"              the table or view the test is on
+         last line (small, subtle): where the test is declared and its severity
     Rows without the detail columns (older runs) show dbt's node name and message, as before."""
     blocks = []
     for r in issues[:MAX_LINES]:
@@ -292,6 +306,13 @@ def issue_lines(issues, color):
             {"type": "TextBlock", "text": (r.get("description") or r.get("message") or r["status"])[:400],
              "wrap": True, "size": "Small", "spacing": "None", "isSubtle": not r.get("description")},
         ]
+        if where_to_look:
+            bad_rows, model = short_relation(r.get("failures_relation")), short_relation(r.get("parent_relation"))
+            for label, value in (("Bad rows", f"select * from {bad_rows}" if bad_rows else None),
+                                 ("Model", model)):
+                if value:
+                    items.append({"type": "TextBlock", "text": f"{label}: {value}", "wrap": True,
+                                  "fontType": "Monospace", "size": "Small", "spacing": "None"})
         where = " · ".join(part for part in (
             f"declared in {r['declared_in']}" if r.get("declared_in") else "",
             f"severity {r['severity']}" if r.get("severity") else "") if part)
@@ -344,7 +365,7 @@ def build_card(summary, *, run_started_utc, invocation_id, target_name, stale, a
     if n_err:
         body.append({"type": "TextBlock", "text": f"Errors ({n_err}): downstream models were skipped",
                      "weight": "Bolder", "color": "Attention", "spacing": "Medium"})
-        body.extend(issue_lines(summary["errors"], "Attention"))
+        body.extend(issue_lines(summary["errors"], "Attention", where_to_look=True))
     if n_warn:
         body.append({"type": "TextBlock", "text": f"Warnings ({n_warn}): logged, the build carried on",
                      "weight": "Bolder", "color": "Warning", "spacing": "Medium"})
