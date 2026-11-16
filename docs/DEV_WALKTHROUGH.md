@@ -4,7 +4,7 @@ For showing the project to another developer who wants to learn dbt. It is code-
 the commands, look at what dbt did. (`DEMO_SCRIPT.md` is the shorter, results-first run sheet; use it later
 for the business audience, once the report is cleaned up.)
 
-About 45 minutes. Section 6 is the reference: every task and script we wrote, and how to reset and clean up.
+About 50 minutes. Section 6 is the reference: every task and script we wrote, and how to reset and clean up.
 
 ---
 
@@ -269,6 +269,9 @@ test (select returning bad rows) → dbt build → on-run-end hook → audit.dbt
 | `stg_erp__invoice_line.shipment_no · relationships` · 37 rows | every invoice line points at a real shipment | generic (`relationships`), `_erp__models.yml` | silver staging | **warn**: an ERP data-entry problem; revenue is still right |
 | `stg_erp__customer.state_text · relationships` · 1 row | every state spelling is in the state seed | generic (`relationships`), `_erp__models.yml` | silver staging | **warn**: one customer typed "Minnesotta"; fix it in the ERP |
 | `stg_dist__depletion_hawkeye · assert_distributor_reports_not_late` · 1 row | all distributors reported the same latest month | singular | silver staging | **warn**: Hawkeye's September report is late; channel numbers are understated until it arrives |
+
+For singular tests the model on the card is the last table the test reads, not something dbt declares, so
+take it as a pointer: on the late-report test it says Hawkeye only because Hawkeye sorts last.
 
 Plus **7 skipped**: `fct_batch`, its 5 tests, and the exposure `lpb_semantic_model`. They depend on
 `int_batch_summary`, whose error test failed, so `dbt build` didn't build them.

@@ -55,6 +55,13 @@ Open and arrange, left to right:
 
 - "Last night's pipeline: load bronze, check source freshness, dbt build, then this card. dbt ran 145 data
   tests and 16 unit tests."
+- **Read one line of the card out loud.** First line: which model and column, what kind of test, how many
+  rows (`int_batch_summary.yield_pct · between · 1 row`). Second line: what the test checks and what a
+  failure means, in plain English. That sentence is the test's `description:` in the YAML, written next to
+  the test by whoever wrote it. Last line: the file it's declared in and its severity. Errors also give a
+  `select * from audit.<test>` to paste, which returns the failing rows themselves.
+- "All of that comes from dbt's own metadata. The end-of-run hook logs it to `audit.dbt_run_log`, and the
+  notebook just formats it. Add a test with a description, and it shows up here with no other change."
 - **Errors stop the line.** Batch B260826-2 shows a 138% yield: more beer packaged than was brewed, a keying
   error. That is an error test, so `fct_batch` and its tests (7 nodes) were skipped rather than publishing
   wrong cost-per-barrel numbers. Gold also has sales into North Dakota with no excise rate.
@@ -120,7 +127,8 @@ git diff dbt\seeds
 - The full nightly build (a couple of minutes; talk over it or show the report meanwhile): **0 errors,
   2 warnings**. The two left are business follow-ups, not data-platform problems: the invoice lines without a
   shipment, and the customer's state spelling, which belongs in the ERP.
-- Fabric, `nb_dbt_alert`, **Run all** (about a minute): the new Teams card.
+- Fabric, `nb_dbt_alert`, **Run all** (about a minute): the new Teams card. Only the two warnings are left,
+  each with its plain-English description, so it's obvious that both belong to the ERP team.
 - The report, **Distributor Sell-through** page: **Unmapped depletion barrels** is now 0, and Cranberry Bog
   Sour shows up under Northland and Hawkeye. Direct Lake picked up the new gold data without a refresh.
 
