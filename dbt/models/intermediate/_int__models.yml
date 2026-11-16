@@ -40,6 +40,11 @@ models:
         description: Packaged barrels divided by brewed barrels. Null until the batch is packaged.
         data_tests:
           - between:
+              description: >
+                Checks that each batch's yield (packaged barrels divided by brewed barrels) is between
+                0 and 1; a failure means a batch shows more beer packaged than brewed, almost always a
+                keying error in production, so its cost per barrel and the production reports are wrong
+                until the batch is corrected.
               arguments:
                 min_value: 0
                 max_value: 1

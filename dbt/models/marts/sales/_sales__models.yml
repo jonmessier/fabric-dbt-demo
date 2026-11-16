@@ -36,6 +36,10 @@ models:
     description: Excise rate per barrel from ref_excise_tax_rate. Null means the state is missing from the seed.
     data_tests:
     - not_null:
+        description: >
+          Checks that every state and month in the excise fact has an excise rate; a failure means a
+          state we sold into is missing from ref_excise_tax_rate, so the excise tax owed there is blank
+          and the excise report understates what we owe.
         config:
           severity: error
   - name: excise_tax_amount

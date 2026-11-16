@@ -31,7 +31,9 @@
 # **What it sends:** one Adaptive Card with
 # * a headline: `dbt build: 2 errors, 6 warnings, 7 skipped` (or `dbt build passed`)
 # * the counts, when the run started and how long it took
-# * the errors and warnings, one line each, with dbt's own message ("Got 14 results, configured to warn if != 0")
+# * the errors and warnings, each with what failed (`stg_erp__customer.state_text · relationships · 1 row`),
+#   what the test checks (its dbt description; dbt's own message if it has none) and where it is declared
+#   with its severity. The hook logs those details with every result.
 # * a button that opens the workspace in Fabric.
 #
 # **Where the Teams address comes from:** a Teams *Workflows* webhook (Teams > channel > ... > Workflows >
@@ -161,10 +163,19 @@ with sql_connection() as conn:
         raise RuntimeError("audit.dbt_run_log is empty: has dbt run in this workspace yet?")
     invocation_id, target_name, run_started_at = latest
 
+    # The columns that say what a test is about (parent_model, column_name, test_kind, severity,
+    # declared_in, description) were added to the table later; log_run_results adds them on its next run.
+    # Until then, and for rows written before that, they read as null and the card falls back to dbt's
+    # node name and message.
+    DETAIL_COLUMNS = ["parent_model", "column_name", "test_kind", "severity", "declared_in", "description"]
+    cur.execute("select name from sys.columns where object_id = object_id('audit.dbt_run_log')")
+    present = {r[0] for r in cur.fetchall()}
+    details = ", ".join(c if c in present else f"cast(null as varchar(10)) as {c}" for c in DETAIL_COLUMNS)
+
     # Every node of that run. Hooks (on-run-start/end) are not in the table; tests, models, seeds and
     # snapshots are.
-    cur.execute("""
-        select resource_type, node_name, status, failures, message, execution_time_seconds
+    cur.execute(f"""
+        select resource_type, node_name, status, failures, message, execution_time_seconds, {details}
         from audit.dbt_run_log
         where invocation_id = ?
     """, invocation_id)
@@ -246,22 +257,48 @@ def plain_name(node_name):
     return node_name if len(node_name) <= 70 else node_name[:67] + "..."
 
 
+def issue_title(r):
+    """What failed, in words a reader can place: 'int_batch_summary.yield_pct · between'.
+
+    Built from the columns log_run_results writes: the model the test is on, the tested column (generic
+    tests only) and the kind of test. Singular tests have no kind worth showing ("singular"), so they show
+    their own name, which is written to be read (assert_no_unmapped_skus_in_gold). Returns None for rows
+    logged before those columns existed; the caller then shows dbt's node name as before."""
+    kind, model = r.get("test_kind"), r.get("parent_model")
+    if not kind:
+        return None
+    readable = {"singular": r["node_name"], "unit": f"unit test {r['node_name']}"}.get(kind, kind)
+    if not model:
+        return readable
+    target = model + (f".{r['column_name']}" if r.get("column_name") else "")
+    return f"{target} · {readable}"
+
+
 def issue_lines(issues, color):
-    """One small block per problem: the node in bold, dbt's message under it."""
+    """One small block per problem:
+         line 1 (bold, colored): what failed, and how many rows
+         line 2 (small):         what the test checks (its description), or dbt's message if it has none
+         line 3 (small, subtle): where the test is declared and its severity
+    Rows without the detail columns (older runs) show dbt's node name and message, as before."""
     blocks = []
     for r in issues[:MAX_LINES]:
         rows_txt = f" · {r['failures']} row{'s' if r['failures'] != 1 else ''}" if r.get("failures") else ""
-        blocks.append({
-            "type": "Container", "spacing": "Small",
-            "items": [
-                {"type": "RichTextBlock", "inlines": [
-                    {"type": "TextRun", "text": plain_name(r["node_name"]), "weight": "Bolder", "color": color,
-                     "size": "Small"},
-                    {"type": "TextRun", "text": rows_txt, "color": color, "size": "Small"}]},
-                {"type": "TextBlock", "text": (r.get("message") or r["status"])[:300], "wrap": True,
-                 "isSubtle": True, "size": "Small", "spacing": "None"},
-            ],
-        })
+        title = issue_title(r)
+        items = [
+            {"type": "RichTextBlock", "inlines": [
+                {"type": "TextRun", "text": title or plain_name(r["node_name"]), "weight": "Bolder",
+                 "color": color, "size": "Small"},
+                {"type": "TextRun", "text": rows_txt, "color": color, "size": "Small"}]},
+            {"type": "TextBlock", "text": (r.get("description") or r.get("message") or r["status"])[:400],
+             "wrap": True, "size": "Small", "spacing": "None", "isSubtle": not r.get("description")},
+        ]
+        where = " · ".join(part for part in (
+            f"declared in {r['declared_in']}" if r.get("declared_in") else "",
+            f"severity {r['severity']}" if r.get("severity") else "") if part)
+        if title and where:
+            items.append({"type": "TextBlock", "text": where, "wrap": True, "isSubtle": True,
+                          "size": "Small", "spacing": "None"})
+        blocks.append({"type": "Container", "spacing": "Small", "items": items})
     if len(issues) > MAX_LINES:
         blocks.append({"type": "TextBlock", "size": "Small", "isSubtle": True,
                        "text": f"…and {len(issues) - MAX_LINES} more in audit.dbt_run_log"})

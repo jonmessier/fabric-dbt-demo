@@ -13,7 +13,12 @@ models:
       - name: distributor_sku
         data_tests:
           - not_null
-          - relationships: &sku_is_mapped
+          - relationships: &sku_is_mapped   # shared by all three distributors
+              description: >
+                Checks that every product code in the distributor's depletion report is mapped to one of
+                our SKUs in ref_distributor_sku_xref; a failure means some of that distributor's
+                sell-through can't be tied to a brand, so it lands on the UNMAPPED product and brand and
+                channel-inventory numbers are understated.
               arguments:
                 to: ref('ref_distributor_sku_xref')
                 field: distributor_sku

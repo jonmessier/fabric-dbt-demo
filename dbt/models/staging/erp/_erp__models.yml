@@ -17,6 +17,10 @@ models:
         description: State upper-cased and trimmed, ready to look up in ref_state_region.
         data_tests:
           - relationships:
+              description: >
+                Checks that every customer's state, as typed in the ERP, matches a state in
+                ref_state_region; a failure means a new spelling or a bad entry left a customer without
+                a state and sales region, so their sales drop out of the regional reports.
               arguments:
                 to: ref('ref_state_region')
                 field: state_text
@@ -123,6 +127,10 @@ models:
         description: Shipment the invoice bills for. Null on credit memos.
         data_tests:
           - relationships:
+              description: >
+                Checks that every invoice line that names a shipment points to a shipment the ERP
+                recorded; a failure means we billed for shipments with no shipment record, which finance
+                should review before trusting shipped-versus-billed numbers.
               arguments:
                 to: ref('stg_erp__shipment')
                 field: shipment_no
