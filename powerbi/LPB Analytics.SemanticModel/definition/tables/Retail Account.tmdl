@@ -1,0 +1,58 @@
+/// Bars, restaurants and stores the distributors sell to.
+table 'Retail Account'
+	lineageTag: 7fa0a973-6945-58de-b7fd-84b53aff1dec
+
+	/// Distributor code and the distributor's own account id.
+	column 'Retail Account Key'
+		dataType: string
+		isHidden
+		lineageTag: d30cd95d-0923-5182-a255-710f1001b54a
+		summarizeBy: none
+		sourceColumn: retail_account_key
+
+	/// Distributor; joins to dim_distributor.
+	column 'Distributor Code'
+		dataType: string
+		lineageTag: 8b1f534f-c9ef-576d-8ef3-fe4a40d3b2e7
+		summarizeBy: none
+		sourceColumn: distributor_code
+
+	column 'Distributor Account ID'
+		dataType: string
+		lineageTag: ef540f3c-88b4-5228-9ff3-c20f730bd4bf
+		summarizeBy: none
+		sourceColumn: distributor_account_id
+
+	column 'Account Name'
+		dataType: string
+		lineageTag: f5d179de-267e-5eee-8e3a-991d7f626395
+		summarizeBy: none
+		sourceColumn: account_name
+
+	/// ON_PREMISE (bars, restaurants) or OFF_PREMISE (stores).
+	column 'Premise Type'
+		dataType: string
+		lineageTag: f092fbe4-0d92-5f87-999d-955357e6f63a
+		summarizeBy: none
+		sourceColumn: premise_type
+
+	column City
+		dataType: string
+		lineageTag: dbfd2603-4117-574b-aaa3-59cf63d0a97c
+		summarizeBy: none
+		sourceColumn: city
+
+	/// Two-letter state.
+	column State
+		dataType: string
+		lineageTag: 2dd6b04d-6580-563f-b63e-3bb4ef4fdc54
+		summarizeBy: none
+		sourceColumn: state_code
+
+	partition 'Retail Account' = entity
+		mode: directLake
+		source
+			entityName: dim_retail_account
+			schemaName: gold
+			expressionSource: 'DirectLake - wh_analytics'
+

@@ -1,0 +1,127 @@
+/// Distributor sell-through by month, retail account and distributor product code.
+table Depletions
+	lineageTag: a92a5791-0673-5216-80c3-91e7681b0fd3
+
+	/// Barrels the distributors reported selling to retail (sell-through).
+	measure 'Depletion Barrels' = SUM(Depletions[Barrels])
+		formatString: #,0.0
+		lineageTag: e386ada8-34e5-521d-9ac5-a7ee0232b522
+
+	/// Depletions whose distributor product code is not in the cross-reference seed yet.
+	measure 'Unmapped Depletion Barrels' = CALCULATE([Depletion Barrels], Depletions[Is SKU Mapped] = FALSE())
+		formatString: #,0.0
+		lineageTag: 86dbd184-d089-5888-a694-fa043c3c06dd
+
+	/// Retail accounts with depletions in the period.
+	measure 'Active Retail Accounts' = DISTINCTCOUNT(Depletions[Retail Account Key])
+		formatString: #,0
+		lineageTag: b3f4f8a1-0d30-5071-93a6-f025ea43437b
+
+	column 'Depletion Key'
+		dataType: string
+		isHidden
+		lineageTag: 784a53d3-3e38-58c9-9564-2ece9cf0ed8b
+		summarizeBy: none
+		sourceColumn: depletion_key
+
+	/// First day of the month as yyyymmdd; joins to dim_date.
+	column 'Month Date Key'
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: defc66a1-ca0b-5e02-a880-8481895cfd67
+		summarizeBy: none
+		sourceColumn: month_date_key
+
+	column 'Report Month'
+		dataType: dateTime
+		formatString: mmm yyyy
+		lineageTag: 65a4aa62-c558-598e-be28-3e96e1ebd17d
+		summarizeBy: none
+		sourceColumn: report_month
+
+	/// Distributor; joins to dim_distributor.
+	column 'Distributor Code'
+		dataType: string
+		isHidden
+		lineageTag: 72e79548-8fdb-5095-b561-d4ad54d194d8
+		summarizeBy: none
+		sourceColumn: distributor_code
+
+	/// Joins to dim_retail_account.
+	column 'Retail Account Key'
+		dataType: string
+		isHidden
+		lineageTag: 5c1d6e1c-40a6-5765-bbdb-0717d6b44d25
+		summarizeBy: none
+		sourceColumn: retail_account_key
+
+	/// Product; joins to dim_product.
+	column 'Product Key'
+		dataType: string
+		isHidden
+		lineageTag: c995d386-115d-575b-a734-8466172bf65a
+		summarizeBy: none
+		sourceColumn: product_key
+
+	/// Brand; joins to dim_brand.
+	column 'Brand Code'
+		dataType: string
+		lineageTag: 59bce126-cf4b-5141-8f82-5b6945cdb82b
+		summarizeBy: none
+		sourceColumn: brand_code
+
+	/// The distributor's own product code.
+	column 'Distributor SKU'
+		dataType: string
+		lineageTag: 7813ce22-06cf-570b-b4d5-53f60829c5e0
+		summarizeBy: none
+		sourceColumn: distributor_sku
+
+	/// 0 when the distributor product code is not in the cross-reference seed.
+	column 'Is SKU Mapped'
+		dataType: boolean
+		lineageTag: 777ac1d8-bbcb-5655-a439-20f719bce070
+		summarizeBy: none
+		sourceColumn: is_sku_mapped
+
+	/// Units in the line's own unit (keg, case, pour, pack, item).
+	column Quantity
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 81733d38-c901-5d24-bcdb-980fc712170f
+		summarizeBy: none
+		sourceColumn: quantity
+
+	column 'Unit Type'
+		dataType: string
+		lineageTag: ab35dce3-ae2f-52b6-b6fc-4b17d17e7b17
+		summarizeBy: none
+		sourceColumn: unit_type
+
+	/// Volume in US beer barrels (31 gallons). Negative on returns.
+	column Barrels
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		lineageTag: a5301af6-b822-51de-8d58-80de61e11918
+		summarizeBy: none
+		sourceColumn: barrels
+
+	/// Volume in 24 x 12 oz case equivalents.
+	column 'Case Equivalents'
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		lineageTag: 62b3204e-8042-5615-a913-516792013394
+		summarizeBy: none
+		sourceColumn: case_equivalents
+
+	partition Depletions = entity
+		mode: directLake
+		source
+			entityName: fct_depletion
+			schemaName: gold
+			expressionSource: 'DirectLake - wh_analytics'
+

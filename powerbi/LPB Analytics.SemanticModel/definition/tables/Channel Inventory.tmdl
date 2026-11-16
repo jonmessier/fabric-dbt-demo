@@ -1,0 +1,125 @@
+/// Barrels in each distributor's warehouse by brand and month: shipped vs depleted.
+table 'Channel Inventory'
+	lineageTag: a43e6622-f33b-5838-9f51-bd79c286a93e
+
+	/// Barrels shipped to distributors.
+	measure 'Sell-in Barrels' = SUM('Channel Inventory'[Shipped Barrels])
+		formatString: #,0.0
+		lineageTag: 6966c849-999b-537b-8cd2-3f92a3741cdd
+
+	/// Barrels the distributors sold on to retail.
+	measure 'Sell-through Barrels' = SUM('Channel Inventory'[Depleted Barrels])
+		formatString: #,0.0
+		lineageTag: 149a9f85-7776-539e-8f62-54c85b1d347d
+
+	/// Sell-through as a share of sell-in.
+	measure 'Sell-through %' = DIVIDE([Sell-through Barrels], [Sell-in Barrels])
+		formatString: 0.0%
+		lineageTag: 4085efab-637c-5d9d-a6f5-4c582763ff1b
+
+	/// Barrels in distributor warehouses at the end of the latest month in the selection.
+	measure 'Ending Inventory' =
+			VAR LastMonth = MAX('Channel Inventory'[Report Month])
+			RETURN CALCULATE(SUM('Channel Inventory'[Ending Inventory Barrels]), 'Channel Inventory'[Report Month] = LastMonth)
+		formatString: #,0.0
+		lineageTag: 040ffab3-c58b-5b50-a283-d362c1ac5be7
+
+	/// Ending inventory divided by the latest month's average weekly sell-through.
+	measure 'Weeks of Supply' =
+			VAR LastMonth = MAX('Channel Inventory'[Report Month])
+			VAR Depleted = CALCULATE(SUM('Channel Inventory'[Depleted Barrels]), 'Channel Inventory'[Report Month] = LastMonth)
+			VAR WeeksInMonth = DAY(EOMONTH(LastMonth, 0)) / 7
+			RETURN DIVIDE([Ending Inventory], DIVIDE(Depleted, WeeksInMonth))
+		formatString: #,0.0
+		lineageTag: 800ddd85-fda8-5c38-a1e1-fc8e255d88cb
+
+	column 'Channel Inventory Key'
+		dataType: string
+		isHidden
+		lineageTag: e7873c56-35bc-5152-838e-ab1d30d5c409
+		summarizeBy: none
+		sourceColumn: channel_inventory_key
+
+	/// First day of the month as yyyymmdd; joins to dim_date.
+	column 'Month Date Key'
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: bba79958-e54c-5946-8cd5-9984e38bd5fe
+		summarizeBy: none
+		sourceColumn: month_date_key
+
+	column 'Report Month'
+		dataType: dateTime
+		formatString: mmm yyyy
+		lineageTag: 2d482a9c-91b5-5614-9576-ce493ecc8450
+		summarizeBy: none
+		sourceColumn: report_month
+
+	/// Distributor; joins to dim_distributor.
+	column 'Distributor Code'
+		dataType: string
+		isHidden
+		lineageTag: 282b877d-9106-5b01-acec-31a9c766ac3a
+		summarizeBy: none
+		sourceColumn: distributor_code
+
+	/// Brand; joins to dim_brand.
+	column 'Brand Code'
+		dataType: string
+		isHidden
+		lineageTag: e86a510d-bee8-5142-899a-72d663a448aa
+		summarizeBy: none
+		sourceColumn: brand_code
+
+	/// Barrels invoiced to the distributor (sell-in).
+	column 'Shipped Barrels'
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		lineageTag: ecdefbee-7d32-533d-b90f-cc4f6ccd38d5
+		summarizeBy: none
+		sourceColumn: shipped_barrels
+
+	/// Barrels the distributor reported selling (sell-through).
+	column 'Depleted Barrels'
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		lineageTag: f46d65ea-7ead-5f30-b1c6-a48491557814
+		summarizeBy: none
+		sourceColumn: depleted_barrels
+
+	column 'Net Change Barrels'
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		lineageTag: ea5febdc-e0cd-540d-bb26-0211f09c94cc
+		summarizeBy: none
+		sourceColumn: net_change_barrels
+
+	/// Running total of shipped minus depleted, assuming zero starting inventory.
+	column 'Ending Inventory Barrels'
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		lineageTag: 151a7a89-3eca-53a9-a2bc-21ede1d9fe5a
+		summarizeBy: none
+		sourceColumn: ending_inventory_barrels
+
+	/// Ending inventory divided by the month's average weekly depletions.
+	column 'Monthly Weeks of Supply'
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		lineageTag: 5030c269-e676-575f-968d-7e13172922df
+		summarizeBy: none
+		sourceColumn: weeks_of_supply
+
+	partition 'Channel Inventory' = entity
+		mode: directLake
+		source
+			entityName: fct_channel_inventory_monthly
+			schemaName: gold
+			expressionSource: 'DirectLake - wh_analytics'
+

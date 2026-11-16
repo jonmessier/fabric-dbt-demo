@@ -1,0 +1,93 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.5.0/schema.json",
+  "name": "6faea0482e1192cae8c2",
+  "position": {
+    "x": 16,
+    "y": 200,
+    "z": 200,
+    "width": 820,
+    "height": 256,
+    "tabOrder": 200
+  },
+  "visual": {
+    "visualType": "clusteredColumnChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Date"
+                    }
+                  },
+                  "Property": "Month Start Date"
+                }
+              },
+              "queryRef": "Date.Month Start Date",
+              "nativeQueryRef": "Month Start Date",
+              "displayName": "Month"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Channel Inventory"
+                    }
+                  },
+                  "Property": "Sell-in Barrels"
+                }
+              },
+              "queryRef": "Channel Inventory.Sell-in Barrels",
+              "nativeQueryRef": "Sell-in Barrels"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Channel Inventory"
+                    }
+                  },
+                  "Property": "Sell-through Barrels"
+                }
+              },
+              "queryRef": "Channel Inventory.Sell-through Barrels",
+              "nativeQueryRef": "Sell-through Barrels"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Sell-in vs sell-through by month'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

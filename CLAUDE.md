@@ -29,7 +29,9 @@ Use `.\tasks.ps1` as the entry point (`.\tasks.ps1 help` lists everything; tasks
 | Simulate next business day | `.\tasks.ps1 advance-day -Env dev` |
 | Full build | `.\tasks.ps1 build` (= `dbt run --empty` for missing incremental tables, then `dbt build --selector nightly`) |
 | Publish / run the Fabric dbt job | `.\tasks.ps1 dbt-job -Env dev` (`-Run` also runs it in Fabric) |
-| Deploy / run the daily pipeline | `.\tasks.ps1 pipeline -Env dev` (`-Run` uploads new landing files and runs it) |
+| Deploy / run the daily pipeline | `.\tasks.ps1 pipeline -Env dev` (`-Run` uploads new landing files and runs it; includes the Teams alert `nb_dbt_alert`) |
+| Deploy the semantic model and report | `.\tasks.ps1 powerbi -Env dev` (`-Export` pulls the report edited in Fabric back into `powerbi/`) |
+| Lineage page | `.\tasks.ps1 lineage` (writes and opens `docs/lineage/dbt_lineage.html`) |
 | First build into an empty warehouse | `.\tasks.ps1 build -FirstBuild` (unit tests after the models) |
 | Freshness | `dbt source freshness` |
 | Unit tests only | `dbt test -s test_type:unit` |
@@ -53,6 +55,13 @@ Use `.\tasks.ps1` as the entry point (`.\tasks.ps1 help` lists everything; tasks
 - Bronze is loaded by `notebooks/nb_ingest_bronze.py` and must match `docs/BRONZE.md` (all strings, lower snake_case, `_source_file`/`_landed_date`/`_ingested_at`). Change the doc and the notebook together.
 - Source data comes from `scripts/generate_data.py` (stdlib only, deterministic). Read its docstring before changing staging models; `-WriteSeeds` overwrites hand edits in `dbt/seeds`.
 - Seeds are business-owned reference data. Keep them small, sorted, with a `_seeds.yml` declaring column types.
+
+## Power BI (`powerbi/`)
+- `LPB Analytics.SemanticModel` (TMDL, Direct Lake on OneLake over `wh_analytics.gold`) and `LPB Sales and Distribution.Report` (PBIR) are the source of truth; `scripts/powerbi.py` deploys them.
+- `expressions.tmdl` keeps the `{{WORKSPACE_ID}}`/`{{WAREHOUSE_ID}}` placeholders; never commit real IDs. `definition.pbir` stays `byPath`; the script switches it to `byConnection` on deploy.
+- Tables use business names (`Sales`, `Depletions`, ...) mapped to gold models in each partition's `entityName`. A gold column rename must be mirrored in the table's `sourceColumn`, or the model breaks (the dbt exposure `lpb_semantic_model` shows what is affected).
+- Measures live on their fact table. Brand is reached through Product for line-level facts (snowflake) so no fact has two paths to Brand.
+- Visual changes: prefer editing in Fabric and `.\tasks.ps1 powerbi -Export`; hand edits to visual JSON must validate against the `$schema` in each file.
 
 ## Scripts
 - Python scripts in `scripts/` are idempotent, non-interactive (flags, not prompts), take `--env`, and print a final one-line JSON summary (`{"ok": true, ...}`) so results are easy to parse.

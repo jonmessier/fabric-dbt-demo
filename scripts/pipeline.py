@@ -5,12 +5,17 @@
 Pipeline (docs/DESIGN.md section 4):
 
     Ingest bronze (nb_ingest_bronze) -> Check source freshness (nb_dbt_freshness) -> Build with dbt (dbt_lpb)
+        -> Alert Teams (nb_dbt_alert, runs when the dbt step completes, pass or fail)
 
 Deploys, by name (IDs are looked up at run time, never stored in git):
   * nb_ingest_bronze  from notebooks/nb_ingest_bronze.py, lh_bronze as default lakehouse
   * nb_dbt_freshness  from notebooks/nb_dbt_freshness.py (refreshes the SQL endpoint, runs
                       dbt source freshness with the project taken from dbt_lpb; fails on errors)
-  * pl_daily_load     the three activities above. The dbt one (InvokeDataBuildToolJob, selector nightly) needs
+  * nb_dbt_alert      from notebooks/nb_dbt_alert.py (reads the newest run from audit.dbt_run_log and posts
+                      an Adaptive Card to Teams). The webhook URL comes from TEAMS_WEBHOOK_URL in .env and is
+                      copied to lh_bronze Files/_config/teams_webhook_url.txt, never into git or the pipeline.
+                      Without it the notebook does a dry run (card saved to Files/_alerts/).
+  * pl_daily_load     the four activities above. The dbt one (InvokeDataBuildToolJob, selector nightly) needs
                       a Fabric connection of type DataBuildToolJob, which is created in the UI (OAuth) or
                       for a service principal. It is found by name from config environments.<env>.dbt_connection,
                       or else the connection the pipeline already uses is kept. Activities this script does
@@ -32,7 +37,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 from fabric_common import (REPO_ROOT, FabricClient, FabricError, OneLake, TokenCache, env_config,
-                           finish, log)
+                           finish, log, read_env_file)
 from load_bronze import NOTEBOOK_SRC, deploy_notebook, notebook_source, upload_landing
 
 FRESHNESS_SRC = REPO_ROOT / "notebooks" / "nb_dbt_freshness.py"
@@ -40,9 +45,13 @@ FRESHNESS_NOTEBOOK = "nb_dbt_freshness"
 INGEST_ACTIVITY = "Ingest bronze"
 FRESHNESS_ACTIVITY = "Check source freshness"
 DBT_ACTIVITY = "Build with dbt"
+ALERT_SRC = REPO_ROOT / "notebooks" / "nb_dbt_alert.py"
+ALERT_NOTEBOOK = "nb_dbt_alert"
+ALERT_ACTIVITY = "Alert Teams"
+WEBHOOK_FILE = "Files/_config/teams_webhook_url.txt"   # inside lh_bronze; read by nb_dbt_alert
 DBT_ACTIVITY_TYPE = "InvokeDataBuildToolJob"
 DBT_SELECTOR = "nightly"
-OWNED = (INGEST_ACTIVITY, FRESHNESS_ACTIVITY, DBT_ACTIVITY)
+OWNED = (INGEST_ACTIVITY, FRESHNESS_ACTIVITY, DBT_ACTIVITY, ALERT_ACTIVITY)
 
 
 def check_dbt_pins() -> None:
@@ -60,11 +69,13 @@ def check_dbt_pins() -> None:
         raise FabricError(f"{FRESHNESS_SRC.name}: DBT_PACKAGES not found")
 
 
-def notebook_activity(name: str, ws_id: str, notebook_id: str, depends_on: list[str], timeout: str) -> dict:
+def notebook_activity(name: str, ws_id: str, notebook_id: str, depends_on: list[str], timeout: str,
+                      condition: str = "Succeeded") -> dict:
+    """condition: Succeeded (the default), or Completed = run whether the previous step succeeded or failed."""
     return {
         "name": name,
         "type": "TridentNotebook",
-        "dependsOn": [{"activity": d, "dependencyConditions": ["Succeeded"]} for d in depends_on],
+        "dependsOn": [{"activity": d, "dependencyConditions": [condition]} for d in depends_on],
         "policy": {"timeout": timeout, "retry": 0, "retryIntervalInSeconds": 30,
                    "secureOutput": False, "secureInput": False},
         "typeProperties": {"notebookId": notebook_id, "workspaceId": ws_id},
@@ -103,11 +114,15 @@ def dbt_connection_id(client: FabricClient, cfg: dict, existing: list[dict]) -> 
 
 
 def pipeline_definition(ws_id: str, ingest_id: str, freshness_id: str, dbt_job_id: str, connection_id: str,
-                        existing: list[dict]) -> dict:
+                        alert_id: str, existing: list[dict]) -> dict:
     activities = [
         notebook_activity(INGEST_ACTIVITY, ws_id, ingest_id, [], "0.01:00:00"),
         notebook_activity(FRESHNESS_ACTIVITY, ws_id, freshness_id, [INGEST_ACTIVITY], "0.00:30:00"),
         dbt_activity(ws_id, dbt_job_id, connection_id),
+        # "Completed": the alert also runs when the dbt step fails (a failing test fails the step), which is
+        # the run we most want to hear about. If freshness fails, dbt is skipped and so is the alert; the
+        # pipeline run itself shows as failed in Fabric.
+        notebook_activity(ALERT_ACTIVITY, ws_id, alert_id, [DBT_ACTIVITY], "0.00:15:00", condition="Completed"),
     ]
     # Any dbt job activity already there (whatever its name) is replaced by ours.
     replaced = {a.get("name") for a in existing if a.get("type") == DBT_ACTIVITY_TYPE}
@@ -120,8 +135,8 @@ def pipeline_definition(ws_id: str, ingest_id: str, freshness_id: str, dbt_job_i
             # Other first-level activities (added in the UI) run after freshness.
             deps.append({"activity": FRESHNESS_ACTIVITY, "dependencyConditions": ["Succeeded"]})
         activities.append({**act, "dependsOn": deps})
-    content = {"properties": {"description": "Daily load: bronze ingest, source freshness, dbt build. "
-                                             "Deployed by scripts/pipeline.py.",
+    content = {"properties": {"description": "Daily load: bronze ingest, source freshness, dbt build, Teams "
+                                             "alert. Deployed by scripts/pipeline.py.",
                               "activities": activities}}
     return {"parts": [{"path": "pipeline-content.json", "payloadType": "InlineBase64",
                        "payload": base64.b64encode(json.dumps(content, indent=2).encode()).decode()}]}
@@ -138,11 +153,11 @@ def existing_activities(client: FabricClient, ws_id: str, pipeline: dict | None)
 
 
 def ensure_pipeline(client: FabricClient, ws_id: str, name: str, ingest_id: str, freshness_id: str,
-                    dbt_job_id: str, cfg: dict) -> tuple[dict, str, list, str]:
+                    dbt_job_id: str, alert_id: str, cfg: dict) -> tuple[dict, str, list, str]:
     pl = client.item(ws_id, "dataPipelines", name, required=False)
     existing = existing_activities(client, ws_id, pl)
     connection_id, found = dbt_connection_id(client, cfg, existing)
-    definition = pipeline_definition(ws_id, ingest_id, freshness_id, dbt_job_id, connection_id, existing)
+    definition = pipeline_definition(ws_id, ingest_id, freshness_id, dbt_job_id, connection_id, alert_id, existing)
     names = [a["name"] for a in json.loads(base64.b64decode(definition["parts"][0]["payload"]))["properties"]["activities"]]
     if pl is None:
         log(f"Creating pipeline {name}")
@@ -153,6 +168,22 @@ def ensure_pipeline(client: FabricClient, ws_id: str, name: str, ingest_id: str,
     client.request("POST", f"workspaces/{ws_id}/dataPipelines/{pl['id']}/updateDefinition",
                    json_body={"definition": definition})
     return pl, "updated", names, found
+
+
+def sync_teams_webhook(onelake: OneLake, lakehouse_id: str) -> str:
+    """Copy TEAMS_WEBHOOK_URL from .env to the lakehouse, where nb_dbt_alert reads it.
+
+    The URL works like a password (anyone with it can post to the channel), so it stays out of git and out of
+    the pipeline definition. Removing it from .env leaves the lakehouse copy alone; delete
+    Files/_config/teams_webhook_url.txt in the lakehouse to go back to dry runs.
+    """
+    url = read_env_file().get("TEAMS_WEBHOOK_URL", "").strip()
+    if not url:
+        return "not configured: nb_dbt_alert will do dry runs (set TEAMS_WEBHOOK_URL in .env)"
+    if not url.startswith("https://"):
+        raise FabricError("TEAMS_WEBHOOK_URL in .env must start with https://")
+    onelake.upload(f"{lakehouse_id}/{WEBHOOK_FILE}", url.encode("utf-8"))
+    return f"webhook URL copied to lh_bronze {WEBHOOK_FILE}"
 
 
 def run_pipeline(client: FabricClient, ws_id: str, pl_id: str, timeout_s: int) -> dict:
@@ -226,10 +257,12 @@ def main() -> None:
         ingest, a1 = deploy_notebook(client, ws["id"], cfg["items"]["ingest_notebook"],
                                      notebook_source(NOTEBOOK_SRC, ws["id"], lh))
         fresh, a2 = deploy_notebook(client, ws["id"], FRESHNESS_NOTEBOOK, notebook_source(FRESHNESS_SRC, ws["id"]))
+        alert, a4 = deploy_notebook(client, ws["id"], ALERT_NOTEBOOK, notebook_source(ALERT_SRC, ws["id"]))
         pl, a3, names, conn = ensure_pipeline(client, ws["id"], cfg["items"]["pipeline"], ingest["id"], fresh["id"],
-                                              dbt_job["id"], cfg)
-        summary["deployed"] = {cfg["items"]["ingest_notebook"]: a1, FRESHNESS_NOTEBOOK: a2,
+                                              dbt_job["id"], alert["id"], cfg)
+        summary["deployed"] = {cfg["items"]["ingest_notebook"]: a1, FRESHNESS_NOTEBOOK: a2, ALERT_NOTEBOOK: a4,
                                cfg["items"]["pipeline"]: a3, "activities": names, "dbt_connection": conn}
+        summary["teams"] = sync_teams_webhook(OneLake(ws["id"], tokens), lh["id"])
 
         if args.run:
             if not args.skip_upload:

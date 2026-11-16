@@ -32,7 +32,8 @@ param(
     [switch]$FirstBuild,
     [switch]$Yes,
     [switch]$WriteSeeds,
-    [switch]$Force
+    [switch]$Force,
+    [switch]$Export
 )
 
 $ErrorActionPreference = 'Stop'
@@ -140,8 +141,11 @@ try {
                    (-ReloadAll = rebuild every bronze table, -SkipUpload = notebook only)
     dbt-job        Publish dbt\ as the Fabric dbt job dbt_lpb (dbt build, all nodes)
                    (-Run = also run it in Fabric and print its dbt version and results)
-    pipeline       Deploy nb_ingest_bronze, nb_dbt_freshness and pl_daily_load
+    pipeline       Deploy nb_ingest_bronze, nb_dbt_freshness, nb_dbt_alert and pl_daily_load
                    (-Run = upload new landing files, run the pipeline, print each activity)
+                   TEAMS_WEBHOOK_URL in .env = where the alert posts; empty = dry run
+    powerbi        Deploy the semantic model and report from powerbi\, then refresh the model
+                   (-Export = pull the report edited in Fabric back into powerbi\)
     reset          Put the demo back to its starting state ("act 1"); needs -Yes
 
   Fabric (not built yet)
@@ -233,6 +237,11 @@ try {
             $a = @('--env', $Environment)
             if ($Run) { $a += '--run' }
             Invoke-Script 'dbt_job.py' $a
+        }
+        'powerbi' {
+            $a = @('--env', $Environment)
+            if ($Export) { $a += '--export' }
+            Invoke-Script 'powerbi.py' $a
         }
         'reset' {
             if (-not $Yes) {

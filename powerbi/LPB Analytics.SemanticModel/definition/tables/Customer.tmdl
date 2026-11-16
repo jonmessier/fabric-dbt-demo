@@ -1,0 +1,106 @@
+/// ERP customers as a type 2 dimension (one row per version), plus a TAPROOM member.
+table Customer
+	lineageTag: 0691254a-9711-5ff2-a4c7-6d8eb29ac1b9
+
+	/// The customer version valid on the transaction date; joins to dim_customer.
+	column 'Customer Version Key'
+		dataType: string
+		isHidden
+		lineageTag: b1e0e421-4c85-595f-adf3-9833a07054f3
+		summarizeBy: none
+		sourceColumn: customer_version_key
+
+	/// ERP customer number (TAPROOM for walk-in taproom sales).
+	column 'Customer No'
+		dataType: string
+		lineageTag: 1eba4f0c-2f3c-5baa-93c6-9fde1a1745cb
+		summarizeBy: none
+		sourceColumn: customer_no
+
+	column 'Customer Name'
+		dataType: string
+		lineageTag: f61f824f-aba8-5c86-a41e-185fabb10ad1
+		summarizeBy: none
+		sourceColumn: customer_name
+
+	column 'Customer Type'
+		dataType: string
+		lineageTag: 06401d59-e5e0-591a-9cf5-56f77a23097a
+		summarizeBy: none
+		sourceColumn: customer_type
+
+	/// Sales channel; joins to dim_channel.
+	column Channel
+		dataType: string
+		lineageTag: ff96f691-5326-52ba-84de-fe71a1c70a52
+		summarizeBy: none
+		sourceColumn: channel
+
+	column City
+		dataType: string
+		lineageTag: 8dc0822b-5b86-55f6-982a-b060f2c373ef
+		summarizeBy: none
+		sourceColumn: city
+
+	/// Two-letter state.
+	column State
+		dataType: string
+		lineageTag: 88c5b393-fef9-5e43-968b-3d91dd6e91dd
+		summarizeBy: none
+		sourceColumn: state_code
+
+	column 'Sales Region'
+		dataType: string
+		lineageTag: 8c69189a-c2ae-5a1b-bbf8-11955ed9d6bc
+		summarizeBy: none
+		sourceColumn: sales_region
+
+	/// Price list tier: A distributor, B key account, C standard, D event.
+	column 'Price Tier'
+		dataType: string
+		lineageTag: 89098cfe-f6ba-5b27-968f-ac03cadf231b
+		summarizeBy: none
+		sourceColumn: price_tier
+
+	column Territory
+		dataType: string
+		lineageTag: 60c0a4a3-9d65-5071-97ae-02e91d4e29df
+		summarizeBy: none
+		sourceColumn: territory
+
+	column Salesperson
+		dataType: string
+		lineageTag: 570088e7-1cac-5801-a9fb-9a9a770206b4
+		summarizeBy: none
+		sourceColumn: salesperson
+
+	/// When this version became current (the ERP updated_at).
+	column 'Valid From'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 6903bd4e-230e-543d-86ac-f27b44ea4e51
+		summarizeBy: none
+		sourceColumn: valid_from
+
+	/// When it was replaced; null for the current version.
+	column 'Valid To'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 0c444171-e084-5c3a-977c-64c60e07ab5a
+		summarizeBy: none
+		sourceColumn: valid_to
+
+	/// 1 for the current version of each customer.
+	column 'Is Current'
+		dataType: boolean
+		lineageTag: 9ca8fe31-abcf-520d-853c-9c1a80c946f1
+		summarizeBy: none
+		sourceColumn: is_current
+
+	partition Customer = entity
+		mode: directLake
+		source
+			entityName: dim_customer
+			schemaName: gold
+			expressionSource: 'DirectLake - wh_analytics'
+

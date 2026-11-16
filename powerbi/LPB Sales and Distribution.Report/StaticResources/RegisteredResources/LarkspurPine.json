@@ -1,0 +1,21 @@
+{
+  "name": "Larkspur & Pine",
+  "dataColors": [
+    "#2E5E4E",
+    "#C8963E",
+    "#6C74C9",
+    "#8FA37A",
+    "#9C4F3C",
+    "#4F7CAC",
+    "#D8B25A",
+    "#5B6770"
+  ],
+  "foreground": "#1F2A24",
+  "foregroundNeutralSecondary": "#5B6770",
+  "background": "#FFFFFF",
+  "backgroundLight": "#F4F2EC",
+  "tableAccent": "#2E5E4E",
+  "good": "#2F855A",
+  "neutral": "#C8963E",
+  "bad": "#B33A3A"
+}
